@@ -53,10 +53,6 @@ public class Terminal {
             }
             else
                 isConnectedClicked = false;
-
-
-
-
         });
 
     }
@@ -155,7 +151,6 @@ public class Terminal {
         addHoverEffectToBase(base);
         addHoverEffectToButton(button);
         changeConnectorColorAndCursorOnHover(connector);
-        toggleTerminalState(button, connector);
         makeTerminalDraggable(base);
 
         // TODO: display popup which consists a delete button and input field for name.

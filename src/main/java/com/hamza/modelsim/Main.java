@@ -3,13 +3,13 @@ package com.hamza.modelsim;
 import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.abstractcomponents.Wire;
 import com.hamza.modelsim.components.Canvas;
+import com.hamza.modelsim.components.InputPin;
 import com.hamza.modelsim.components.MenuBar;
 import com.hamza.modelsim.components.Terminal;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -19,17 +19,15 @@ import javafx.scene.layout.Background;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.Objects;
 
 public class Main extends Application {
-    public static ObservableList<Terminal> inputTerminals;
+    public static ObservableList<InputPin> inputPins;
     public static ObservableList<Terminal> outputTerminals;
     public static ObservableList<Wire> wires;
     public static Scene scene;
@@ -44,7 +42,7 @@ public class Main extends Application {
         mainStage.setFullScreenExitHint("");
         mainStage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
 
-        inputTerminals = FXCollections.observableArrayList();
+        inputPins = FXCollections.observableArrayList();
         outputTerminals = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
         mousePosition = new Point();
@@ -87,14 +85,13 @@ public class Main extends Application {
         canvas.add(outputTerminalsBase);
 
         // INPUT terminals
-
         // TODO: You're able to fix this SOS, do it then...
         // displayTestTerminal(canvas, inputTerminalsBase);
 
         inputTerminalsBase.setOnMouseClicked(addNewInputTerminal(canvas));
 
-        for(var terminal : inputTerminals)
-            canvas.add(terminal.getDrawable());
+        for(var pin : inputPins)
+            pin.draw(canvas.getDrawable());
 
         // OUTPUT terminals
         outputTerminalsBase.setOnMouseClicked(addNewOutputTerminal(canvas));
@@ -123,13 +120,13 @@ public class Main extends Application {
     @NotNull
     private EventHandler<MouseEvent> addNewInputTerminal(Canvas canvas) {
         return e -> {
-            inputTerminals.add(new Terminal(e.getSceneY() - TerminalConstants.height / 2, true, true));
+            inputPins.add(new InputPin(e.getSceneY() - TerminalConstants.height / 2));
 
-            for (var terminal : inputTerminals) {
-                canvas.getDrawable().getChildren().removeIf(terminal.getDrawable()::equals);
+            for (var pin : inputPins) {
+                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
             }
-            for (var terminal : inputTerminals)
-                canvas.add(terminal.getDrawable());
+            for (var pin : inputPins)
+                pin.draw(canvas.getDrawable());
         };
     }
 
