@@ -1,0 +1,32 @@
+/* BUTTON */
+.button {
+    -fx-background-color: transparent;
+    -fx-border: none;
+    -fx-font-size: 20px;
+    -fx-font-family: Arial;
+    -fx-text-fill: #fff;
+    -fx-font-weight: bold;
+}
+.button:hover {
+    -fx-cursor: hand;
+    -fx-background-color: #333;
+}
+.button:pressed {
+    -fx-translate-y: .5px;
+}
+
+/**
+ * CONTEXT MENU
+ */
+.context-menu {
+    -fx-background-color: #3a3a3a;
+    -fx-font-size: 20px;
+}
+.menu-item .label {
+    -fx-text-fill: #fff;
+    -fx-padding: 8px 16px;
+}
+.menu-item:hover, .menu-item:focused {
+    -fx-background-color: #333;
+    -fx-cursor: hand;
+}
