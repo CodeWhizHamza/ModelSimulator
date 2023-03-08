@@ -2,11 +2,14 @@ package com.hamza.modelsim.components;
 
 import com.hamza.modelsim.abstractcomponents.IODatable;
 import com.hamza.modelsim.abstractcomponents.Input;
+import com.hamza.modelsim.abstractcomponents.Output;
 import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.LayoutConstants;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.scene.Cursor;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Circle;
@@ -14,7 +17,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
 
-public class InputPin implements Pin {
+public class OutputPin implements Pin {
     private static int terminalsCount = 0;
     private final Pane pane;
     private String name;
@@ -23,15 +26,16 @@ public class InputPin implements Pin {
     private Circle connector;
     private Circle button;
 
-    public InputPin(double y) {
+    public OutputPin(double y) {
         name = TerminalConstants.name + " " + terminalsCount++;
 
         pane = new Pane();
+        pane.setScaleX(-1);
         pane.setPrefHeight(TerminalConstants.height);
-        pane.setLayoutX(TerminalConstants.leftX);
+        pane.setLayoutX(TerminalConstants.rightX);
         setY(y);
 
-        state = new Input(0);
+        state = new Output(0);
 
         connectionPoint = new Point();
         connectionPoint.setX(pane.layoutXProperty().get() + 85 + TerminalConstants.connectorRadius);
@@ -64,17 +68,11 @@ public class InputPin implements Pin {
         connector.setRadius(TerminalConstants.connectorRadius);
         connector.setFill(getValue() == 0 ? Colors.terminalGreyColor : Colors.terminalActiveColor);
 
-        Text labelForName = new Text(name);
-        labelForName.setFill(Colors.white);
-        labelForName.setLayoutX(110);
-        labelForName.setLayoutY(35);
-
         // behaviour
         observeChangesInY();
         addHoverEffectToBase(base);
         addHoverEffectToButton();
         addHoverEffectToConnector();
-        setTerminalToggler();
         makeTerminalDraggable(base);
 
         // TODO: display popup which consists a delete button and input field for name.
@@ -86,9 +84,7 @@ public class InputPin implements Pin {
         pane.getChildren().add(extender);
         pane.getChildren().add(button);
         pane.getChildren().add(connector);
-        pane.getChildren().add(labelForName);
 
-        // loadImages();
     }
 
     private void observeChangesInY() {
@@ -121,13 +117,6 @@ public class InputPin implements Pin {
         });
         connector.setOnMouseExited(e -> {
             connector.getScene().setCursor(Cursor.DEFAULT);
-        });
-    }
-    private void setTerminalToggler() {
-        button.setOnMouseClicked(e -> {
-            if(e.getButton().compareTo(MouseButton.PRIMARY) != 0) return ;
-            if (getValue() == 1) setValue(0);
-            else setValue(1);
         });
     }
     private void makeTerminalDraggable(Rectangle base) {

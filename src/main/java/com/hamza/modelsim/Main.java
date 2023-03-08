@@ -1,11 +1,9 @@
 package com.hamza.modelsim;
 
+import com.hamza.modelsim.abstractcomponents.Output;
 import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.abstractcomponents.Wire;
-import com.hamza.modelsim.components.Canvas;
-import com.hamza.modelsim.components.InputPin;
-import com.hamza.modelsim.components.MenuBar;
-import com.hamza.modelsim.components.Terminal;
+import com.hamza.modelsim.components.*;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.application.Application;
@@ -28,7 +26,7 @@ import java.util.Objects;
 
 public class Main extends Application {
     public static ObservableList<InputPin> inputPins;
-    public static ObservableList<Terminal> outputTerminals;
+    public static ObservableList<OutputPin> outputPins;
     public static ObservableList<Wire> wires;
     public static Scene scene;
     public static Canvas canvas;
@@ -43,7 +41,7 @@ public class Main extends Application {
         mainStage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
 
         inputPins = FXCollections.observableArrayList();
-        outputTerminals = FXCollections.observableArrayList();
+        outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
         mousePosition = new Point();
 
@@ -95,8 +93,8 @@ public class Main extends Application {
 
         // OUTPUT terminals
         outputTerminalsBase.setOnMouseClicked(addNewOutputTerminal(canvas));
-        for(var terminal : outputTerminals)
-            canvas.add(terminal.getDrawable());
+        for(var pin : outputPins)
+            pin.draw(canvas.getDrawable());
 
 
         scene.setFill(Colors.backgroundColor);
@@ -107,13 +105,13 @@ public class Main extends Application {
     @NotNull
     private EventHandler<MouseEvent> addNewOutputTerminal(Canvas canvas) {
         return e -> {
-            outputTerminals.add(new Terminal(e.getSceneY() - TerminalConstants.height / 2, false, true));
+            outputPins.add(new OutputPin(e.getSceneY() - TerminalConstants.height / 2));
 
-            for (var terminal : outputTerminals) {
-                canvas.getDrawable().getChildren().removeIf(terminal.getDrawable()::equals);
+            for (var pin : outputPins) {
+                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
             }
-            for (var terminal : outputTerminals)
-                canvas.add(terminal.getDrawable());
+            for (var pin : outputPins)
+                pin.draw(canvas.getDrawable());
         };
     }
 
