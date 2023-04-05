@@ -51,7 +51,7 @@ public class Main extends Application {
         root.setSpacing(0);
 
         scene = new Scene(root);
-        scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("main.css")).toExternalForm());
+        scene.getStylesheets().add(getClass().getClassLoader().getResource("main.css").toExternalForm());
 
         canvas = new Canvas();
         MenuBar menuBar = new MenuBar(scene);
@@ -75,8 +75,8 @@ public class Main extends Application {
                 borderWidth, borderHeight, Colors.bordersColor
         );
         Rectangle outputTerminalsBase = makeRectangle(
-                Screen.getPrimary().getBounds().getWidth() - xPosition - borderWidth, yPosition,
-                borderWidth, borderHeight, Colors.bordersColor
+                Screen.getPrimary().getBounds().getWidth() - xPosition - borderWidth,
+                yPosition, borderWidth, borderHeight, Colors.bordersColor
         );
 
         canvas.add(inputTerminalsBase);
@@ -87,6 +87,8 @@ public class Main extends Application {
         // displayTestTerminal(canvas, inputTerminalsBase);
 
         inputTerminalsBase.setOnMouseClicked(addNewInputTerminal(canvas));
+
+        outputPins.add(new OutputPin(100));
 
         for(var pin : inputPins)
             pin.draw(canvas.getDrawable());
