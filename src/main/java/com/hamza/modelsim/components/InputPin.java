@@ -78,6 +78,7 @@ public class InputPin extends Pin {
     public void draw(Pane canvas) {
         canvas.getChildren().add(getPane());
     }
+
     public int getValue() {
         return state;
     }

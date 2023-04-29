@@ -7,6 +7,7 @@ import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -22,8 +23,10 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Main extends Application {
     public static ObservableList<InputPin> inputPins;
@@ -31,6 +34,8 @@ public class Main extends Application {
     public static ObservableList<Wire> wires;
     public static Scene scene;
     public static Canvas canvas;
+
+    private boolean isWireDrawing;
 
     private Point mousePosition;
     private Point firstClick;
@@ -46,6 +51,9 @@ public class Main extends Application {
         inputPins = FXCollections.observableArrayList();
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
+
+        isWireDrawing = false;
+
         mousePosition = new Point();
         firstClick = null;
         l = new Polyline();
@@ -60,45 +68,88 @@ public class Main extends Application {
         root.setBackground(Background.fill(Colors.backgroundColor));
         root.setFillWidth(true);
         root.setSpacing(0);
-
         scene = new Scene(root);
-        scene.getStylesheets().add(getClass().getClassLoader().getResource("main.css").toExternalForm());
+
+        URL stylesheetURLCanBeNull = getClass().getClassLoader().getResource("main.css");
+        String stylesheet = Objects.requireNonNull(stylesheetURLCanBeNull).toExternalForm();
+        scene.getStylesheets().add(stylesheet);
 
         canvas = new Canvas();
         MenuBar menuBar = new MenuBar(scene);
 
+        /*
+          When user clicks on the input pin, a wire will start drawing
+          setting isWireDrawing = true, and the starting position of wire
+          to the clicked location of mouse.
+         */
+        inputPins.addListener((ListChangeListener<? super InputPin>) change -> {
+            for (var pin : inputPins) {
+                pin.getConnector().setOnMouseClicked(e -> {
+                    // if wire is already drawing, no need to draw another one.
+                    if (isWireDrawing) return;
+
+                    isWireDrawing = true;
+                    wires.add(new Wire(pin));
+                });
+            }
+        });
+
+        scene.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY && wires.size() > 0 && isWireDrawing) {
+                wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
+            }
+            else if (e.getButton() == MouseButton.SECONDARY) {
+                if (wires.size() == 0 || !isWireDrawing) return;
+                wires.remove(wires.size() - 1);
+                isWireDrawing = false;
+            }
+        });
         scene.setOnMouseMoved(e -> {
-            mousePosition.setX(e.getSceneX());
-            mousePosition.setY(e.getSceneY());
-
-            if (firstClick != null) {
-                l.getPoints().clear();
-                l.getPoints().addAll(firstClick.getX(), firstClick.getY());
-
-                for(var p : points) {
-                    l.getPoints().add(p.getX());
-                    l.getPoints().add(p.getY());
-                }
-
-                l.getPoints().addAll(mousePosition.getX(), mousePosition.getY());
-            } else {
-                l.getPoints().clear();
-            }
+            if (wires.size() == 0) return;
+            wires.get(wires.size() - 1).setMousePosition(new Point(e.getSceneX(), e.getSceneY()));
         });
-        canvas.add(l);
 
-        scene.setOnMouseClicked(mouseEvent -> {
-            if (mouseEvent.getButton() == MouseButton.PRIMARY) {
-                if (firstClick == null) {
-                    firstClick = new Point(mouseEvent.getSceneX(), mouseEvent.getSceneY());
-                } else {
-                    points.add(new Point(mouseEvent.getSceneX(), mouseEvent.getSceneY()));
-                }
-            } else if (mouseEvent.getButton() == MouseButton.SECONDARY) {
-                firstClick = null;
-                points.clear();
-            }
+        // redraw when wires array changes.
+        wires.addListener((ListChangeListener<? super Wire>) change -> {
+            // Polyline means it's a wire.
+            canvas.getDrawable().getChildren().removeIf(node -> node instanceof Polyline);
+            wires.forEach(wire -> wire.draw(canvas));
         });
+
+
+//        scene.setOnMouseMoved(e -> {
+//            mousePosition.setX(e.getSceneX());
+//            mousePosition.setY(e.getSceneY());
+//
+//            if (firstClick != null) {
+//                l.getPoints().clear();
+//                l.getPoints().addAll(firstClick.getX(), firstClick.getY());
+//
+//                for(var p : points) {
+//                    l.getPoints().add(p.getX());
+//                    l.getPoints().add(p.getY());
+//                }
+//
+//                l.getPoints().addAll(mousePosition.getX(), mousePosition.getY());
+//            } else {
+//                l.getPoints().clear();
+//            }
+//        });
+//        canvas.add(l);
+//
+//        scene.setOnMouseClicked(mouseEvent -> {
+//            if (mouseEvent.getButton() == MouseButton.PRIMARY) {
+//                if (firstClick == null) {
+//                    firstClick = new Point(mouseEvent.getSceneX(), mouseEvent.getSceneY());
+//                } else {
+//                    points.add(new Point(mouseEvent.getSceneX(), mouseEvent.getSceneY()));
+//                }
+//
+//            } else if (mouseEvent.getButton() == MouseButton.SECONDARY) {
+//                firstClick = null;
+//                points.clear();
+//            }
+//        });
 
         root.getChildren().add(canvas.getDrawable());
         root.getChildren().add(menuBar.getDrawable());
@@ -109,32 +160,30 @@ public class Main extends Application {
         double borderWidth = 20;
         double borderHeight = Screen.getPrimary().getBounds().getHeight() - paddingY - menuBar.getHeight();
 
-        Rectangle inputTerminalsBase = makeRectangle(
+        Rectangle inputPinsBase = makeRectangle(
                 xPosition, yPosition,
                 borderWidth, borderHeight, Colors.bordersColor
         );
-        Rectangle outputTerminalsBase = makeRectangle(
+        Rectangle outputPinsBase = makeRectangle(
                 Screen.getPrimary().getBounds().getWidth() - xPosition - borderWidth,
                 yPosition, borderWidth, borderHeight, Colors.bordersColor
         );
 
-        canvas.add(inputTerminalsBase);
-        canvas.add(outputTerminalsBase);
+        canvas.add(inputPinsBase);
+        canvas.add(outputPinsBase);
 
         // INPUT terminals
         // TODO: You're able to fix this SOS, do it then...
-        // displayTestTerminal(canvas, inputTerminalsBase);
+        // displayTestTerminal(canvas, inputPinsBase);
 
-        inputTerminalsBase.setOnMouseClicked(addNewInputTerminal(canvas));
-
+        inputPinsBase.setOnMouseClicked(addNewInputTerminal(canvas));
         for(var pin : inputPins)
             pin.draw(canvas.getDrawable());
 
         // OUTPUT terminals
-        outputTerminalsBase.setOnMouseClicked(addNewOutputTerminal(canvas));
+        outputPinsBase.setOnMouseClicked(addNewOutputTerminal(canvas));
         for(var pin : outputPins)
             pin.draw(canvas.getDrawable());
-
 
         scene.setFill(Colors.backgroundColor);
         mainStage.setScene(scene);
