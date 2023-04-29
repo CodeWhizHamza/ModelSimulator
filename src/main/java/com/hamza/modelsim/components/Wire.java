@@ -100,6 +100,7 @@ public class Wire {
 
     public void draw(Canvas canvas) {
         canvas.getDrawable().getChildren().add(line);
+        line.toBack();
     }
 
     public void setDestination(Pin destination) {

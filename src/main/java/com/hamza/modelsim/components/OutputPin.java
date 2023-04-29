@@ -21,7 +21,7 @@ public class OutputPin extends Pin {
         state.set(State.LOW);
 
         getConnectionPoint().setX(getPane().layoutXProperty().get() + TerminalConstants.connectorRadius);
-        getConnectionPoint().setY(getPane().layoutYProperty().get() + 22.5 + TerminalConstants.connectorRadius);
+        getConnectionPoint().setY(getPane().layoutYProperty().get() + 20 + TerminalConstants.connectorRadius);
 
         getBase().setHeight(getPane().getPrefHeight());
         getBase().setWidth(TerminalConstants.baseWidth);
@@ -42,7 +42,7 @@ public class OutputPin extends Pin {
 
         // Connector
         getConnector().setCenterX(getPane().getPrefWidth() - 82 - TerminalConstants.connectorRadius);
-        getConnector().setCenterY(22.5 + TerminalConstants.connectorRadius);
+        getConnector().setCenterY(20 + TerminalConstants.connectorRadius);
         getConnector().setRadius(TerminalConstants.connectorRadius);
         getConnector().setFill(Colors.terminalGreyColor);
 
@@ -61,7 +61,7 @@ public class OutputPin extends Pin {
     protected void observeChangesInY() {
         getPane().layoutYProperty().addListener((observableValue, number, t1) -> {
             getConnectionPoint().setX(getPane().layoutXProperty().get() + TerminalConstants.connectorRadius);
-            getConnectionPoint().setY(getPane().layoutYProperty().get() + 22.5 + TerminalConstants.connectorRadius);
+            getConnectionPoint().setY(getPane().layoutYProperty().get() + 20 + TerminalConstants.connectorRadius);
         });
     }
 
