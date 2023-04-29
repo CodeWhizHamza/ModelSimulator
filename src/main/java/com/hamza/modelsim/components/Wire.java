@@ -66,7 +66,7 @@ public class Wire {
         line.getPoints().addAll(sourceLocation.getX(), sourceLocation.getY());
 
         for (Point p : points) {
-            if (p.equals(points.get(0))) continue;
+//            if (p.equals(points.get(0))) continue;
             line.getPoints().addAll(p.getX(), p.getY());
         }
 
@@ -107,7 +107,11 @@ public class Wire {
     }
 
     public void setMousePosition(Point p) {
-        Point lastPoint = points.get(points.size() - 1);
+        Point lastPoint;
+        if (points.size() == 0)
+            lastPoint = source.getConnectionPoint();
+        else
+            lastPoint = points.get(points.size() - 1);
 
         double angle = getAngle(p, lastPoint);
         double hypo = getHypo(p, lastPoint);

@@ -14,6 +14,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Polyline;
@@ -74,10 +75,14 @@ public class Main extends Application {
                     if (e.getButton() != MouseButton.PRIMARY) return;
 
                     // if wire is already drawing, no need to draw another one.
-                    if (isWireDrawing) return;
+                    if (isWireDrawing) {
+                        wires.get(wires.size() - 1).setDestination(pin);
+                        isWireDrawing = false;
+                    } else {
+                        isWireDrawing = true;
+                        wires.add(new Wire(pin));
+                    }
 
-                    isWireDrawing = true;
-                    wires.add(new Wire(pin));
                 });
             }
         });
@@ -88,18 +93,23 @@ public class Main extends Application {
         outputPins.addListener((ListChangeListener<? super OutputPin>) change -> {
             for (var pin : outputPins) {
                 pin.getConnector().setOnMouseClicked(e -> {
-                    e.consume();
                     if (e.getButton() != MouseButton.PRIMARY) return;
 
                     if (isWireDrawing) {
                         wires.get(wires.size() - 1).setDestination(pin);
                         isWireDrawing = false;
+                    } else {
+                        isWireDrawing = true;
+                        wires.add(new Wire(pin));
                     }
                 });
             }
         });
 
         scene.setOnMouseClicked(e -> {
+            // We will only register mid-points, when the empty area (pane) is clicked.
+            if(!(e.getTarget() instanceof Pane)) return;
+
             if (e.getButton() == MouseButton.PRIMARY && wires.size() > 0 && isWireDrawing) {
                 wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
             } else if (e.getButton() == MouseButton.SECONDARY) {
