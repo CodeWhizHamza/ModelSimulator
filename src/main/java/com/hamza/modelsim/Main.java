@@ -76,7 +76,10 @@ public class Main extends Application {
 
                     // if wire is already drawing, no need to draw another one.
                     if (isWireDrawing) {
-                        wires.get(wires.size() - 1).setDestination(pin);
+                        Wire currentWire = wires.get(wires.size() - 1);
+                        if (currentWire.getSourcePin() instanceof InputPin) return;
+
+                        currentWire.setDestination(pin);
                         isWireDrawing = false;
                     } else {
                         isWireDrawing = true;
@@ -96,7 +99,10 @@ public class Main extends Application {
                     if (e.getButton() != MouseButton.PRIMARY) return;
 
                     if (isWireDrawing) {
-                        wires.get(wires.size() - 1).setDestination(pin);
+                        Wire currentWire = wires.get(wires.size() - 1);
+                        if (currentWire.getSourcePin() instanceof OutputPin) return;
+
+                        currentWire.setDestination(pin);
                         isWireDrawing = false;
                     } else {
                         isWireDrawing = true;

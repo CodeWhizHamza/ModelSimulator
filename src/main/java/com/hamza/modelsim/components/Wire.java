@@ -20,15 +20,18 @@ public class Wire {
     private final Pin source;
     private final ObservableList<Point> points;
     private final Polyline line;
-    private final IntegerProperty state;
+    private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<Point> mousePosition;
     private Pin destination;
+
+    private InputPin inputPin;
+    private OutputPin outputPin;
 
     public Wire(Pin source) {
         this.source = source;
         this.destination = null;
         this.points = FXCollections.observableArrayList();
-        this.state = new SimpleIntegerProperty(State.LOW);
+        this.state.set(State.LOW);
         mousePosition = new SimpleObjectProperty<>();
         mousePosition.set(
                 new Point(source.getConnectionPoint().getX(), source.getConnectionPoint().getY())
@@ -66,7 +69,6 @@ public class Wire {
         line.getPoints().addAll(sourceLocation.getX(), sourceLocation.getY());
 
         for (Point p : points) {
-//            if (p.equals(points.get(0))) continue;
             line.getPoints().addAll(p.getX(), p.getY());
         }
 
@@ -80,7 +82,7 @@ public class Wire {
 
     private void handleStateChange() {
         state.addListener((observableValue, number, t1) -> {
-            if (observableValue.getValue().intValue() == State.HIGH)
+            if (observableValue.getValue() == State.HIGH)
                 line.setStroke(Colors.activeWireColor);
             else
                 line.setStroke(Color.WHITE);
@@ -103,6 +105,31 @@ public class Wire {
         this.destination = destination;
         handleDestinationPinMovement();
         updateLine();
+
+        /*
+          Doing things after completing the wire.
+         */
+        setInputAndOutputPins();
+        listenForStateChanges();
+    }
+    private void setInputAndOutputPins() {
+        if (source instanceof InputPin) {
+            inputPin = (InputPin) source;
+            outputPin = (OutputPin) destination;
+        } else {
+            inputPin = (InputPin) destination;
+            outputPin = (OutputPin) source;
+        }
+    }
+    private void listenForStateChanges() {
+        inputPin.getState().addListener((observableValue, number, t1) -> {
+            state.set(t1);
+            propagateStateToOutput();
+        });
+    }
+
+    private void propagateStateToOutput() {
+        outputPin.setState(state.get());
     }
 
     public void setMousePosition(Point p) {
@@ -138,6 +165,9 @@ public class Wire {
         double perp = Math.abs(p2.getY() - p1.getY());
         double base = Math.abs(p2.getX() - p1.getX());
         return Math.sqrt(perp * perp + base * base) - Size.MOUSE_MARGIN;
+    }
+    public Pin getSourcePin() {
+        return source;
     }
 
     public void addPoint(Point p) {

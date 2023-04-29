@@ -4,12 +4,13 @@ import com.hamza.modelsim.abstractcomponents.Pin;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.State;
 import com.hamza.modelsim.constants.TerminalConstants;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.layout.Pane;
 
 public class OutputPin extends Pin {
     private static int terminalsCount = 0;
     private String name;
-    private int state;
+    private SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
 
     public OutputPin(double y) {
         super(y);
@@ -17,7 +18,7 @@ public class OutputPin extends Pin {
 
         getPane().setLayoutX(TerminalConstants.rightX);
         getPane().setPrefWidth(100);
-        state = State.LOW;
+        state.set(State.LOW);
 
         getConnectionPoint().setX(getPane().layoutXProperty().get() + TerminalConstants.connectorRadius);
         getConnectionPoint().setY(getPane().layoutYProperty().get() + 22.5 + TerminalConstants.connectorRadius);
@@ -37,13 +38,13 @@ public class OutputPin extends Pin {
         getButton().setCenterX(getPane().getPrefWidth() - 17 - TerminalConstants.buttonRadius);
         getButton().setCenterY(TerminalConstants.buttonRadius);
         getButton().setRadius(TerminalConstants.buttonRadius);
-        getButton().setFill(getValue() == 0 ? Colors.terminalGreyColor : Colors.terminalActiveColor);
+        getButton().setFill(state.get() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
 
         // Connector
         getConnector().setCenterX(getPane().getPrefWidth() - 82 - TerminalConstants.connectorRadius);
         getConnector().setCenterY(22.5 + TerminalConstants.connectorRadius);
         getConnector().setRadius(TerminalConstants.connectorRadius);
-        getConnector().setFill(getValue() == 0 ? Colors.terminalGreyColor : Colors.terminalActiveColor);
+        getConnector().setFill(Colors.terminalGreyColor);
 
         // TODO: display popup which consists a delete button and input field for name.
         getBase().setOnMouseClicked(e -> System.out.println("Clicked"));
@@ -68,13 +69,13 @@ public class OutputPin extends Pin {
         canvas.getChildren().add(getPane());
     }
 
-    public int getValue() {
+    public SimpleObjectProperty<State> getState() {
         return state;
     }
 
-    public void setValue(int value) {
-        state = value;
-        getButton().setFill(getValue() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
+    public void setState(State value) {
+        state.set(value);
+        getButton().setFill(state.get() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
     }
 
     public String getName() {

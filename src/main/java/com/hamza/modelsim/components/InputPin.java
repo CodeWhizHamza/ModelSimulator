@@ -4,6 +4,8 @@ import com.hamza.modelsim.abstractcomponents.Pin;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.State;
 import com.hamza.modelsim.constants.TerminalConstants;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
@@ -11,14 +13,14 @@ import javafx.scene.text.Text;
 public class InputPin extends Pin {
     private static int terminalsCount = 0;
     private String name;
-    private int state;
+    private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
 
     public InputPin(double y) {
         super(y);
         name = TerminalConstants.name + " " + terminalsCount++;
 
         getPane().setLayoutX(TerminalConstants.leftX);
-        state = State.LOW;
+        state.set(State.LOW);
 
         getConnectionPoint().setX(getPane().layoutXProperty().get() + 85 + TerminalConstants.connectorRadius);
         getConnectionPoint().setY(getPane().layoutYProperty().get() + 22.5 + TerminalConstants.connectorRadius);
@@ -38,13 +40,13 @@ public class InputPin extends Pin {
         getButton().setCenterX(17 + TerminalConstants.buttonRadius);
         getButton().setCenterY(TerminalConstants.buttonRadius);
         getButton().setRadius(TerminalConstants.buttonRadius);
-        getButton().setFill(getValue() == 0 ? Colors.terminalGreyColor : Colors.terminalActiveColor);
+        getButton().setFill(state.get() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
 
         // Connector
         getConnector().setCenterX(85 + TerminalConstants.connectorRadius);
         getConnector().setCenterY(22.5 + TerminalConstants.connectorRadius);
         getConnector().setRadius(TerminalConstants.connectorRadius);
-        getConnector().setFill(getValue() == 0 ? Colors.terminalGreyColor : Colors.terminalActiveColor);
+        getConnector().setFill(Colors.terminalGreyColor);
 
         Text labelForName = new Text(name);
         labelForName.setFill(Colors.white);
@@ -67,8 +69,8 @@ public class InputPin extends Pin {
     private void setTerminalToggler() {
         getButton().setOnMouseClicked(e -> {
             if (e.getButton().compareTo(MouseButton.PRIMARY) != 0) return;
-            if (getValue() == 1) setValue(0);
-            else setValue(1);
+            if (state.get() == State.HIGH) setState(State.LOW);
+            else setState(State.HIGH);
         });
     }
 
@@ -77,13 +79,13 @@ public class InputPin extends Pin {
         canvas.getChildren().add(getPane());
     }
 
-    public int getValue() {
+    public SimpleObjectProperty<State> getState() {
         return state;
     }
 
-    public void setValue(int value) {
-        state = value;
-        getButton().setFill(getValue() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
+    public void setState(State value) {
+        state.set(value);
+        getButton().setFill(state.get() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
     }
 
     public String getName() {
