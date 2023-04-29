@@ -12,11 +12,11 @@ import javafx.stage.Screen;
 public abstract class Pin {
     private final Pane pane;
     private int state;
-    private Point connectionPoint;
-    private Rectangle base;
-    private Rectangle extender;
-    private Circle connector;
-    private Circle button;
+    private final Point connectionPoint;
+    private final Rectangle base;
+    private final Rectangle extender;
+    private final Circle connector;
+    private final Circle button;
 
     public Pin(double y) {
         pane = new Pane();
@@ -35,6 +35,7 @@ public abstract class Pin {
         addHoverEffectToConnector();
         makeTerminalDraggable(getBase());
     }
+
     private void addHoverEffectToBase(Rectangle base) {
         base.setOnMouseEntered(e -> {
             base.setFill(Colors.warmWhite);
@@ -45,12 +46,14 @@ public abstract class Pin {
             base.getScene().setCursor(Cursor.DEFAULT);
         });
     }
-    private void observeChangesInY() {
+
+    protected void observeChangesInY() {
         pane.layoutYProperty().addListener((observableValue, number, t1) -> {
             connectionPoint.setX(pane.layoutXProperty().get() + 85 + TerminalConstants.connectorRadius);
-            connectionPoint.setY(pane.layoutYProperty().get() + t1.doubleValue() + 22.5 + TerminalConstants.connectorRadius);
+            connectionPoint.setY(pane.getLayoutY() + connector.getLayoutY() + TerminalConstants.connectorRadius + 22.5);
         });
     }
+
     private void addHoverEffectToButton() {
         button.setOnMouseEntered(e -> {
             button.getScene().setCursor(Cursor.HAND);
@@ -59,6 +62,7 @@ public abstract class Pin {
             button.getScene().setCursor(Cursor.DEFAULT);
         });
     }
+
     private void addHoverEffectToConnector() {
         connector.setOnMouseEntered(e -> {
             connector.getScene().setCursor(Cursor.HAND);
@@ -67,6 +71,7 @@ public abstract class Pin {
             connector.getScene().setCursor(Cursor.DEFAULT);
         });
     }
+
     private void makeTerminalDraggable(Rectangle base) {
         double maxYValue = Screen.getPrimary().getBounds().getHeight() - LayoutConstants.menuHeight - 12 - pane.getPrefHeight() / 2;
         base.setOnMouseDragged(e -> {
@@ -80,6 +85,7 @@ public abstract class Pin {
     public void setY(double y) {
         pane.setLayoutY(y);
     }
+
     public Pane getPane() {
         return pane;
     }
@@ -95,12 +101,15 @@ public abstract class Pin {
     public Circle getButton() {
         return button;
     }
+
     public Rectangle getBase() {
         return base;
     }
+
     public Rectangle getExtender() {
         return extender;
     }
+
     public Pane getDrawable() {
         return pane;
     }

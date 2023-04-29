@@ -17,12 +17,12 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 
 public class Wire {
-    private Pin source;
+    private final Pin source;
     private Pin destination;
-    private ObservableList<Point> points;
-    private Polyline line;
-    private IntegerProperty state;
-    private SimpleObjectProperty<Point> mousePosition;
+    private final ObservableList<Point> points;
+    private final Polyline line;
+    private final IntegerProperty state;
+    private final SimpleObjectProperty<Point> mousePosition;
 
     public Wire(Pin source) {
         this.source = source;
@@ -31,7 +31,7 @@ public class Wire {
         this.state = new SimpleIntegerProperty(State.LOW);
         mousePosition = new SimpleObjectProperty<>();
         mousePosition.set(
-            new Point(source.getConnectionPoint().getX(), source.getConnectionPoint().getY())
+                new Point(source.getConnectionPoint().getX(), source.getConnectionPoint().getY())
         );
 
         this.line = new Polyline();
@@ -41,29 +41,32 @@ public class Wire {
         line.setStroke(Color.WHITE);
 
 
-        handlePinMovement();
+        handleSourceMovement();
         handleStateChange();
         handlePointsChange();
         handleMouseMovement();
     }
-    private void handlePinMovement() {
+
+    private void handleSourceMovement() {
         source.getPane()
                 .layoutYProperty()
                 .addListener((observableValue, number, t1) -> updateLine());
+    }
 
-        if (destination == null) return;
-
+    private void handleDestinationPinMovement() {
         destination.getPane()
                 .layoutYProperty()
                 .addListener((observableValue, number, t1) -> updateLine());
     }
+
     private void updateLine() {
         line.getPoints().clear();
 
         Point sourceLocation = source.getConnectionPoint();
         line.getPoints().addAll(sourceLocation.getX(), sourceLocation.getY());
 
-        for(Point p : points) {
+        for (Point p : points) {
+            if (p.equals(points.get(0))) continue;
             line.getPoints().addAll(p.getX(), p.getY());
         }
 
@@ -71,6 +74,7 @@ public class Wire {
             line.getPoints().addAll(mousePosition.get().getX(), mousePosition.get().getY());
         } else {
             Point destinationLocation = destination.getConnectionPoint();
+            System.out.println(destinationLocation);
             line.getPoints().addAll(destinationLocation.getX(), destinationLocation.getY());
         }
     }
@@ -87,6 +91,7 @@ public class Wire {
     private void handlePointsChange() {
         points.addListener((ListChangeListener<? super Point>) change -> updateLine());
     }
+
     private void handleMouseMovement() {
         mousePosition.addListener(change -> updateLine());
     }
@@ -94,12 +99,44 @@ public class Wire {
     public void draw(Canvas canvas) {
         canvas.getDrawable().getChildren().add(line);
     }
+
     public void setDestination(Pin destination) {
         this.destination = destination;
+        handleDestinationPinMovement();
+        updateLine();
     }
+
     public void setMousePosition(Point p) {
+        Point lastPoint = points.get(points.size() - 1);
+
+        double angle = getAngle(p, lastPoint);
+        double hypo = getHypo(p, lastPoint);
+
+        p = new Point(lastPoint.getX() + hypo * Math.cos(angle), lastPoint.getY() - hypo * Math.sin(angle));
         mousePosition.set(p);
     }
+
+    private double getAngle(Point p1, Point p2) {
+        double angle = Math.atan2(Math.abs(p2.getY() - p1.getY()), Math.abs(p2.getX() - p1.getX()));
+
+        double diffX = p1.getX() - p2.getX();
+        double diffY = p2.getY() - p1.getY();
+
+        if (diffX < 0 && diffY < 0) {
+            angle = Math.PI + angle;
+        } else {
+            if (diffX < 0) angle = Math.PI - angle;
+            if (diffY < 0) angle = 2 * Math.PI - angle;
+        }
+        return angle;
+    }
+
+    private double getHypo(Point p1, Point p2) {
+        double perp = Math.abs(p2.getY() - p1.getY());
+        double base = Math.abs(p2.getX() - p1.getX());
+        return Math.sqrt(perp * perp + base * base) - Size.MOUSE_MARGIN;
+    }
+
     public void addPoint(Point p) {
         points.add(p);
     }

@@ -24,8 +24,6 @@ import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 public class Main extends Application {
@@ -37,10 +35,6 @@ public class Main extends Application {
 
     private boolean isWireDrawing;
 
-    private Point mousePosition;
-    private Point firstClick;
-    Polyline l;
-
     @Override
     public void start(Stage mainStage) {
         mainStage.setTitle("Model simulator");
@@ -51,18 +45,7 @@ public class Main extends Application {
         inputPins = FXCollections.observableArrayList();
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
-
         isWireDrawing = false;
-
-        mousePosition = new Point();
-        firstClick = null;
-        l = new Polyline();
-        l.setStroke(Color.WHITE);
-        l.setStrokeWidth(3);
-        l.setStrokeLineCap(StrokeLineCap.ROUND);
-        l.setStrokeLineJoin(StrokeLineJoin.ROUND);
-
-        List<Point> points = new ArrayList<>();
 
         VBox root = new VBox();
         root.setBackground(Background.fill(Colors.backgroundColor));
@@ -85,11 +68,30 @@ public class Main extends Application {
         inputPins.addListener((ListChangeListener<? super InputPin>) change -> {
             for (var pin : inputPins) {
                 pin.getConnector().setOnMouseClicked(e -> {
+                    if (e.getButton() != MouseButton.PRIMARY) return;
+
                     // if wire is already drawing, no need to draw another one.
                     if (isWireDrawing) return;
 
                     isWireDrawing = true;
                     wires.add(new Wire(pin));
+                });
+            }
+        });
+
+        /*
+          When wire is drawing and output pin is clicked, wire gets completed.
+         */
+        outputPins.addListener((ListChangeListener<? super OutputPin>) change -> {
+            for (var pin : outputPins) {
+                pin.getConnector().setOnMouseClicked(e -> {
+                    e.consume();
+                    if (e.getButton() != MouseButton.PRIMARY) return;
+
+                    if (isWireDrawing) {
+                        wires.get(wires.size() - 1).setDestination(pin);
+                        isWireDrawing = false;
+                    }
                 });
             }
         });
@@ -105,7 +107,7 @@ public class Main extends Application {
             }
         });
         scene.setOnMouseMoved(e -> {
-            if (wires.size() == 0) return;
+            if (wires.size() == 0 || !isWireDrawing) return;
             wires.get(wires.size() - 1).setMousePosition(new Point(e.getSceneX(), e.getSceneY()));
         });
 

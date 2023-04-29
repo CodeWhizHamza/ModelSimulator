@@ -17,9 +17,9 @@ public class OutputPin extends Pin {
 
         getPane().setLayoutX(TerminalConstants.rightX);
         getPane().setPrefWidth(100);
-        state = State.FLOATING;
+        state = State.LOW;
 
-        getConnectionPoint().setX(getPane().layoutXProperty().get() + 85 + TerminalConstants.connectorRadius);
+        getConnectionPoint().setX(getPane().layoutXProperty().get() + TerminalConstants.connectorRadius);
         getConnectionPoint().setY(getPane().layoutYProperty().get() + 22.5 + TerminalConstants.connectorRadius);
 
         getBase().setHeight(getPane().getPrefHeight());
@@ -54,6 +54,16 @@ public class OutputPin extends Pin {
         getPane().getChildren().add(getExtender());
         getPane().getChildren().add(getButton());
         getPane().getChildren().add(getConnector());
+
+        observeChangesInY();
+    }
+
+    @Override
+    protected void observeChangesInY() {
+        getPane().layoutYProperty().addListener((observableValue, number, t1) -> {
+            getConnectionPoint().setX(getPane().layoutXProperty().get() + TerminalConstants.connectorRadius);
+            getConnectionPoint().setY(getPane().layoutYProperty().get() + 22.5 + TerminalConstants.connectorRadius);
+        });
     }
 
     public void draw(Pane canvas) {
