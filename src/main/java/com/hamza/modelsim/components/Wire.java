@@ -74,7 +74,6 @@ public class Wire {
             line.getPoints().addAll(mousePosition.get().getX(), mousePosition.get().getY());
         } else {
             Point destinationLocation = destination.getConnectionPoint();
-            System.out.println(destinationLocation);
             line.getPoints().addAll(destinationLocation.getX(), destinationLocation.getY());
         }
     }
