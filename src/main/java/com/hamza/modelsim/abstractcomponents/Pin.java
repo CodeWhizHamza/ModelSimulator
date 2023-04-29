@@ -1,12 +1,9 @@
 package com.hamza.modelsim.abstractcomponents;
 
-import com.hamza.modelsim.abstractcomponents.IODatable;
-import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.LayoutConstants;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.scene.Cursor;
-import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -14,7 +11,7 @@ import javafx.stage.Screen;
 
 public abstract class Pin {
     private final Pane pane;
-    private IODatable state;
+    private int state;
     private Point connectionPoint;
     private Rectangle base;
     private Rectangle extender;

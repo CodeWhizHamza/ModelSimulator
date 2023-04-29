@@ -1,9 +1,8 @@
 package com.hamza.modelsim.components;
 
-import com.hamza.modelsim.abstractcomponents.IODatable;
-import com.hamza.modelsim.abstractcomponents.Input;
 import com.hamza.modelsim.abstractcomponents.Pin;
 import com.hamza.modelsim.constants.Colors;
+import com.hamza.modelsim.constants.State;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
@@ -12,14 +11,14 @@ import javafx.scene.text.Text;
 public class InputPin extends Pin {
     private static int terminalsCount = 0;
     private String name;
-    private IODatable state;
+    private int state;
 
     public InputPin(double y) {
         super(y);
         name = TerminalConstants.name + " " + terminalsCount++;
 
         getPane().setLayoutX(TerminalConstants.leftX);
-        state = new Input(0);
+        state = State.LOW;
 
         getConnectionPoint().setX(getPane().layoutXProperty().get() + 85 + TerminalConstants.connectorRadius);
         getConnectionPoint().setY(getPane().layoutYProperty().get() + 22.5 + TerminalConstants.connectorRadius);
@@ -80,14 +79,17 @@ public class InputPin extends Pin {
         canvas.getChildren().add(getPane());
     }
     public int getValue() {
-        return state.getValue();
+        return state;
     }
 
     public void setValue(int value) {
-        state.setValue(value);
-        getButton().setFill(getValue() == 0 ? Colors.terminalGreyColor : Colors.terminalActiveColor);
+        state = value;
+        getButton().setFill(getValue() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
     }
     public String getName() {
         return name;
+    }
+    public void setName(String name) {
+        this.name = name;
     }
 }
