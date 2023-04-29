@@ -78,7 +78,6 @@ public class Main extends Application {
                     if (isWireDrawing) {
                         Wire currentWire = wires.get(wires.size() - 1);
                         if (currentWire.getSourcePin() instanceof InputPin) return;
-
                         currentWire.setDestination(pin);
                         isWireDrawing = false;
                     } else {
@@ -101,7 +100,6 @@ public class Main extends Application {
                     if (isWireDrawing) {
                         Wire currentWire = wires.get(wires.size() - 1);
                         if (currentWire.getSourcePin() instanceof OutputPin) return;
-
                         currentWire.setDestination(pin);
                         isWireDrawing = false;
                     } else {
@@ -156,10 +154,6 @@ public class Main extends Application {
 
         canvas.add(inputPinsBase);
         canvas.add(outputPinsBase);
-
-        // INPUT terminals
-        // TODO: You're able to fix this SOS, do it then...
-        // displayTestTerminal(canvas, inputPinsBase);
 
         inputPinsBase.setOnMouseClicked(addNewInputTerminal(canvas));
         for (var pin : inputPins)

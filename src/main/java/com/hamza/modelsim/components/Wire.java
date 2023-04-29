@@ -1,5 +1,6 @@
 package com.hamza.modelsim.components;
 
+import com.hamza.modelsim.Main;
 import com.hamza.modelsim.abstractcomponents.Pin;
 import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.constants.Colors;
@@ -129,7 +130,14 @@ public class Wire {
     }
 
     private void propagateStateToOutput() {
-        outputPin.setState(state.get());
+        ObservableList<Wire> filteredWires = Main.wires.filtered(
+            wire -> (wire.getState().get() == State.HIGH && wire.getOutputPin() == outputPin)
+        );
+        if (filteredWires.size() == 0) {
+            outputPin.setState(state.get());
+        } else {
+            outputPin.setState(State.HIGH);
+        }
     }
 
     public void setMousePosition(Point p) {
@@ -168,6 +176,12 @@ public class Wire {
     }
     public Pin getSourcePin() {
         return source;
+    }
+    public SimpleObjectProperty<State> getState() {
+        return state;
+    }
+    public OutputPin getOutputPin() {
+        return outputPin;
     }
 
     public void addPoint(Point p) {
