@@ -11,12 +11,12 @@ import javafx.stage.Screen;
 
 public abstract class Pin {
     private final Pane pane;
-    private int state;
     private final Point connectionPoint;
     private final Rectangle base;
     private final Rectangle extender;
     private final Circle connector;
     private final Circle button;
+    private int state;
 
     public Pin(double y) {
         pane = new Pane();
@@ -55,21 +55,13 @@ public abstract class Pin {
     }
 
     private void addHoverEffectToButton() {
-        button.setOnMouseEntered(e -> {
-            button.getScene().setCursor(Cursor.HAND);
-        });
-        button.setOnMouseExited(e -> {
-            button.getScene().setCursor(Cursor.DEFAULT);
-        });
+        button.setOnMouseEntered(e -> button.getScene().setCursor(Cursor.HAND));
+        button.setOnMouseExited(e -> button.getScene().setCursor(Cursor.DEFAULT));
     }
 
     private void addHoverEffectToConnector() {
-        connector.setOnMouseEntered(e -> {
-            connector.getScene().setCursor(Cursor.HAND);
-        });
-        connector.setOnMouseExited(e -> {
-            connector.getScene().setCursor(Cursor.DEFAULT);
-        });
+        connector.setOnMouseEntered(e -> connector.getScene().setCursor(Cursor.HAND));
+        connector.setOnMouseExited(e -> connector.getScene().setCursor(Cursor.DEFAULT));
     }
 
     private void makeTerminalDraggable(Rectangle base) {

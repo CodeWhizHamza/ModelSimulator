@@ -55,9 +55,7 @@ public class InputPin extends Pin {
         setTerminalToggler();
 
         // TODO: display popup which consists a delete button and input field for name.
-        getBase().setOnMouseClicked(e -> {
-            System.out.println("Clicked");
-        });
+        getBase().setOnMouseClicked(e -> System.out.println("Clicked"));
 
         getPane().getChildren().add(getBase());
         getPane().getChildren().add(getExtender());
@@ -68,7 +66,7 @@ public class InputPin extends Pin {
 
     private void setTerminalToggler() {
         getButton().setOnMouseClicked(e -> {
-            if(e.getButton().compareTo(MouseButton.PRIMARY) != 0) return ;
+            if (e.getButton().compareTo(MouseButton.PRIMARY) != 0) return;
             if (getValue() == 1) setValue(0);
             else setValue(1);
         });
@@ -87,9 +85,11 @@ public class InputPin extends Pin {
         state = value;
         getButton().setFill(getValue() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
     }
+
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }

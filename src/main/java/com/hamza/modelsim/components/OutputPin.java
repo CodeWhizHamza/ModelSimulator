@@ -46,9 +46,7 @@ public class OutputPin extends Pin {
         getConnector().setFill(getValue() == 0 ? Colors.terminalGreyColor : Colors.terminalActiveColor);
 
         // TODO: display popup which consists a delete button and input field for name.
-        getBase().setOnMouseClicked(e -> {
-            System.out.println("Clicked");
-        });
+        getBase().setOnMouseClicked(e -> System.out.println("Clicked"));
 
         getPane().getChildren().add(getBase());
         getPane().getChildren().add(getExtender());
@@ -69,6 +67,7 @@ public class OutputPin extends Pin {
     public void draw(Pane canvas) {
         canvas.getChildren().add(getPane());
     }
+
     public int getValue() {
         return state;
     }
@@ -77,9 +76,11 @@ public class OutputPin extends Pin {
         state = value;
         getButton().setFill(getValue() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
     }
+
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }

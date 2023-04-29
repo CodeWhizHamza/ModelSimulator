@@ -7,7 +7,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.HBox;
@@ -60,6 +59,7 @@ public class MenuBar {
     public HBox getDrawable() {
         return container;
     }
+
     public double getHeight() {
         return LayoutConstants.menuHeight;
     }

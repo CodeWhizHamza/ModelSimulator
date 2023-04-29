@@ -18,11 +18,11 @@ import javafx.scene.shape.StrokeLineJoin;
 
 public class Wire {
     private final Pin source;
-    private Pin destination;
     private final ObservableList<Point> points;
     private final Polyline line;
     private final IntegerProperty state;
     private final SimpleObjectProperty<Point> mousePosition;
+    private Pin destination;
 
     public Wire(Pin source) {
         this.source = source;

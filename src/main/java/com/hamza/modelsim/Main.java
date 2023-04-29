@@ -1,7 +1,6 @@
 package com.hamza.modelsim;
 
 import com.hamza.modelsim.abstractcomponents.Point;
-import com.hamza.modelsim.components.Wire;
 import com.hamza.modelsim.components.*;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.TerminalConstants;
@@ -9,16 +8,16 @@ import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
-import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.*;
+import javafx.scene.shape.Polyline;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
@@ -34,6 +33,10 @@ public class Main extends Application {
     public static Canvas canvas;
 
     private boolean isWireDrawing;
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
     public void start(Stage mainStage) {
@@ -99,8 +102,7 @@ public class Main extends Application {
         scene.setOnMouseClicked(e -> {
             if (e.getButton() == MouseButton.PRIMARY && wires.size() > 0 && isWireDrawing) {
                 wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
-            }
-            else if (e.getButton() == MouseButton.SECONDARY) {
+            } else if (e.getButton() == MouseButton.SECONDARY) {
                 if (wires.size() == 0 || !isWireDrawing) return;
                 wires.remove(wires.size() - 1);
                 isWireDrawing = false;
@@ -117,41 +119,6 @@ public class Main extends Application {
             canvas.getDrawable().getChildren().removeIf(node -> node instanceof Polyline);
             wires.forEach(wire -> wire.draw(canvas));
         });
-
-
-//        scene.setOnMouseMoved(e -> {
-//            mousePosition.setX(e.getSceneX());
-//            mousePosition.setY(e.getSceneY());
-//
-//            if (firstClick != null) {
-//                l.getPoints().clear();
-//                l.getPoints().addAll(firstClick.getX(), firstClick.getY());
-//
-//                for(var p : points) {
-//                    l.getPoints().add(p.getX());
-//                    l.getPoints().add(p.getY());
-//                }
-//
-//                l.getPoints().addAll(mousePosition.getX(), mousePosition.getY());
-//            } else {
-//                l.getPoints().clear();
-//            }
-//        });
-//        canvas.add(l);
-//
-//        scene.setOnMouseClicked(mouseEvent -> {
-//            if (mouseEvent.getButton() == MouseButton.PRIMARY) {
-//                if (firstClick == null) {
-//                    firstClick = new Point(mouseEvent.getSceneX(), mouseEvent.getSceneY());
-//                } else {
-//                    points.add(new Point(mouseEvent.getSceneX(), mouseEvent.getSceneY()));
-//                }
-//
-//            } else if (mouseEvent.getButton() == MouseButton.SECONDARY) {
-//                firstClick = null;
-//                points.clear();
-//            }
-//        });
 
         root.getChildren().add(canvas.getDrawable());
         root.getChildren().add(menuBar.getDrawable());
@@ -179,12 +146,12 @@ public class Main extends Application {
         // displayTestTerminal(canvas, inputPinsBase);
 
         inputPinsBase.setOnMouseClicked(addNewInputTerminal(canvas));
-        for(var pin : inputPins)
+        for (var pin : inputPins)
             pin.draw(canvas.getDrawable());
 
         // OUTPUT terminals
         outputPinsBase.setOnMouseClicked(addNewOutputTerminal(canvas));
-        for(var pin : outputPins)
+        for (var pin : outputPins)
             pin.draw(canvas.getDrawable());
 
         scene.setFill(Colors.backgroundColor);
@@ -227,6 +194,4 @@ public class Main extends Application {
         rect.setFill(color);
         return rect;
     }
-
-    public static void main(String[] args) { launch(args); }
 }
