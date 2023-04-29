@@ -1,8 +1,7 @@
 package com.hamza.modelsim;
 
-import com.hamza.modelsim.abstractcomponents.Output;
 import com.hamza.modelsim.abstractcomponents.Point;
-import com.hamza.modelsim.abstractcomponents.Wire;
+import com.hamza.modelsim.components.Wire;
 import com.hamza.modelsim.components.*;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.TerminalConstants;
@@ -12,17 +11,19 @@ import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.*;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main extends Application {
     public static ObservableList<InputPin> inputPins;
@@ -32,6 +33,8 @@ public class Main extends Application {
     public static Canvas canvas;
 
     private Point mousePosition;
+    private Point firstClick;
+    Polyline l;
 
     @Override
     public void start(Stage mainStage) {
@@ -44,6 +47,14 @@ public class Main extends Application {
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
         mousePosition = new Point();
+        firstClick = null;
+        l = new Polyline();
+        l.setStroke(Color.WHITE);
+        l.setStrokeWidth(3);
+        l.setStrokeLineCap(StrokeLineCap.ROUND);
+        l.setStrokeLineJoin(StrokeLineJoin.ROUND);
+
+        List<Point> points = new ArrayList<>();
 
         VBox root = new VBox();
         root.setBackground(Background.fill(Colors.backgroundColor));
@@ -59,6 +70,34 @@ public class Main extends Application {
         scene.setOnMouseMoved(e -> {
             mousePosition.setX(e.getSceneX());
             mousePosition.setY(e.getSceneY());
+
+            if (firstClick != null) {
+                l.getPoints().clear();
+                l.getPoints().addAll(firstClick.getX(), firstClick.getY());
+
+                for(var p : points) {
+                    l.getPoints().add(p.getX());
+                    l.getPoints().add(p.getY());
+                }
+
+                l.getPoints().addAll(mousePosition.getX(), mousePosition.getY());
+            } else {
+                l.getPoints().clear();
+            }
+        });
+        canvas.add(l);
+
+        scene.setOnMouseClicked(mouseEvent -> {
+            if (mouseEvent.getButton() == MouseButton.PRIMARY) {
+                if (firstClick == null) {
+                    firstClick = new Point(mouseEvent.getSceneX(), mouseEvent.getSceneY());
+                } else {
+                    points.add(new Point(mouseEvent.getSceneX(), mouseEvent.getSceneY()));
+                }
+            } else if (mouseEvent.getButton() == MouseButton.SECONDARY) {
+                firstClick = null;
+                points.clear();
+            }
         });
 
         root.getChildren().add(canvas.getDrawable());
@@ -87,8 +126,6 @@ public class Main extends Application {
         // displayTestTerminal(canvas, inputTerminalsBase);
 
         inputTerminalsBase.setOnMouseClicked(addNewInputTerminal(canvas));
-
-        outputPins.add(new OutputPin(100));
 
         for(var pin : inputPins)
             pin.draw(canvas.getDrawable());
@@ -128,24 +165,6 @@ public class Main extends Application {
             for (var pin : inputPins)
                 pin.draw(canvas.getDrawable());
         };
-    }
-
-    private void displayTestTerminal(Canvas canvas, @NotNull Rectangle leftBorder) {
-        Terminal inputDisplayTerminal = new Terminal(0, true, false);
-        inputDisplayTerminal.getDrawable().setOnMouseEntered(Event::consume);
-        inputDisplayTerminal.getDrawable().setOnMouseExited(Event::consume);
-        inputDisplayTerminal.getDrawable().setOnMouseMoved(Event::consume);
-
-        leftBorder.setOnMouseEntered(e -> {
-            inputDisplayTerminal.setY(e.getSceneY() - inputDisplayTerminal.getDrawable().getPrefHeight() / 2);
-            canvas.add(inputDisplayTerminal.getDrawable());
-        });
-        leftBorder.setOnMouseMoved(
-            e -> inputDisplayTerminal.setY(e.getSceneY() - inputDisplayTerminal.getDrawable().getPrefHeight() / 2)
-        );
-        leftBorder.setOnMouseExited(
-            e -> canvas.getDrawable().getChildren().removeIf(inputDisplayTerminal.getDrawable()::equals)
-        );
     }
 
     public Rectangle makeRectangle(double x, double y, double width, double height, Color color) {

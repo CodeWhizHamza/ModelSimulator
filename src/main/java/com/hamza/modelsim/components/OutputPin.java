@@ -2,22 +2,15 @@ package com.hamza.modelsim.components;
 
 import com.hamza.modelsim.abstractcomponents.IODatable;
 import com.hamza.modelsim.abstractcomponents.Input;
-import com.hamza.modelsim.abstractcomponents.Point;
+import com.hamza.modelsim.abstractcomponents.Pin;
 import com.hamza.modelsim.constants.Colors;
-import com.hamza.modelsim.constants.LayoutConstants;
 import com.hamza.modelsim.constants.TerminalConstants;
-import javafx.scene.Cursor;
-import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Text;
-import javafx.stage.Screen;
 
 public class OutputPin extends Pin {
     private static int terminalsCount = 0;
     private String name;
-    private IODatable state;
+    private final IODatable state;
 
     public OutputPin(double y) {
         super(y);

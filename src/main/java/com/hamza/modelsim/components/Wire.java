@@ -1,4 +1,6 @@
-package com.hamza.modelsim.abstractcomponents;
+package com.hamza.modelsim.components;
+
+import com.hamza.modelsim.abstractcomponents.Point;
 
 import java.util.ArrayList;
 

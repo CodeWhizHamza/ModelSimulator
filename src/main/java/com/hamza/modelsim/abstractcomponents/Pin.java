@@ -1,4 +1,4 @@
-package com.hamza.modelsim.components;
+package com.hamza.modelsim.abstractcomponents;
 
 import com.hamza.modelsim.abstractcomponents.IODatable;
 import com.hamza.modelsim.abstractcomponents.Point;
