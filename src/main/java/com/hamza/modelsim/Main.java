@@ -9,6 +9,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCombination;
@@ -18,6 +21,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Transform;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
@@ -43,21 +47,6 @@ public class Main extends Application {
 
     @Override
     public void start(Stage mainStage) {
-//        Context context = Context.enter();
-//
-//        try {
-//            Scriptable scope = context.initStandardObjects();
-//            String expression = "A && B || C && D";
-//            String function = "function solveBooleanFunction(A, B, C, D) { return " + expression + "; }";
-//            context.evaluateString(scope, function, "BooleanFunction", 1, null);
-//            Object solveFunction = scope.get("solveBooleanFunction", scope);
-//            org.mozilla.javascript.Function javaFunction = (org.mozilla.javascript.Function) solveFunction;
-//            Object result = javaFunction.call(context, scope, scope, new Object[] { true, false, true, true });
-//            System.out.println("Result: " + result);
-//        } finally {
-//            Context.exit();
-//        }
-
 
         mainStage.setTitle("Model simulator");
         mainStage.setFullScreen(true);
@@ -89,14 +78,15 @@ public class Main extends Application {
           to the clicked location of mouse.
          */
         inputPins.addListener((ListChangeListener<? super InputPin>) change -> {
-            for (var pin : inputPins) {
+            inputPins.forEach(pin -> {
                 pin.getConnector().setOnMouseClicked(e -> {
                     if (e.getButton() != MouseButton.PRIMARY) return;
 
                     // if wire is already drawing, no need to draw another one.
                     if (isWireDrawing) {
                         Wire currentWire = wires.get(wires.size() - 1);
-                        if (currentWire.getSourcePin() instanceof InputPin) return;
+                        Object sourcePin = currentWire.getSourcePin();
+//                        if (sourcePin instanceof InputPin || sourcePin instanceof InputChipPin) return;
                         currentWire.setDestination(pin);
                         isWireDrawing = false;
                     } else {
@@ -105,7 +95,7 @@ public class Main extends Application {
                     }
 
                 });
-            }
+            });
         });
 
         /*
@@ -131,11 +121,12 @@ public class Main extends Application {
 
         scene.setOnMouseClicked(e -> {
             // We will only register mid-points, when the empty area (pane) is clicked.
-            boolean isNotFreeSpace = !(e.getTarget() instanceof Pane)
-                    && e.getTarget() instanceof BorderPane
-                    && e.getTarget() instanceof FlowPane;
-            if(isNotFreeSpace) return;
+            if(!(e.getTarget() instanceof Pane)) return;
 
+            /*
+            Register point on Left click.
+            Delete current wire on right click.
+             */
             if (e.getButton() == MouseButton.PRIMARY && wires.size() > 0 && isWireDrawing) {
                 wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
             } else if (e.getButton() == MouseButton.SECONDARY) {
@@ -188,9 +179,37 @@ public class Main extends Application {
 
         // CHIPS
         chips.addListener((ListChangeListener<? super Chip>) change -> {
-
             chips.forEach(chip -> {
+                chip.getInputPins().forEach(pin -> {
+                    pin.getConnector().setOnMouseClicked(e -> {
+                        if (e.getButton() != MouseButton.PRIMARY) return;
 
+                        if (isWireDrawing) {
+                            Wire currentWire = wires.get(wires.size() - 1);
+                            if (currentWire.getSourcePin() instanceof OutputPin) return;
+                            currentWire.setDestination(pin);
+                            isWireDrawing = false;
+                        } else {
+                            isWireDrawing = true;
+                            wires.add(new Wire(pin));
+                        }
+                    });
+                });
+                chip.getOutputPins().forEach(pin -> {
+                    pin.getConnector().setOnMouseClicked(e -> {
+                        if (e.getButton() != MouseButton.PRIMARY) return;
+
+                        if (isWireDrawing) {
+                            Wire currentWire = wires.get(wires.size() - 1);
+//                            if (currentWire.getSourcePin() instanceof OutputPin) return;
+                            currentWire.setDestination(pin);
+                            isWireDrawing = false;
+                        } else {
+                            isWireDrawing = true;
+                            wires.add(new Wire(pin));
+                        }
+                    });
+                });
             });
 
             canvas.getDrawable().getChildren().removeIf(
@@ -198,9 +217,7 @@ public class Main extends Application {
             );
             chips.forEach(chip -> chip.draw(canvas));
         });
-        chips.add(new Chip("AND", "F=A&B", new Point(450, 450)));
-
-
+        chips.add(new Chip("NOT", "F=!A", new Point(450, 450)));
 
         scene.setFill(Colors.backgroundColor);
         mainStage.setScene(scene);

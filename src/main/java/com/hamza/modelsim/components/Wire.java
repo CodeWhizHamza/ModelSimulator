@@ -6,8 +6,6 @@ import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.Size;
 import com.hamza.modelsim.constants.State;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -18,25 +16,33 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 
 public class Wire {
-    private final Pin source;
     private final ObservableList<Point> points;
     private final Polyline line;
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<Point> mousePosition;
-    private Pin destination;
+    private final Object source;
+    private Object destination;
 
     private InputPin inputPin;
     private OutputPin outputPin;
+    private OutputChipPin inputFromChip;
+    private InputChipPin outputToChip;
 
-    public Wire(Pin source) {
+    public Wire(Object source) {
         this.source = source;
         this.destination = null;
         this.points = FXCollections.observableArrayList();
         this.state.set(State.LOW);
         mousePosition = new SimpleObjectProperty<>();
-        mousePosition.set(
-                new Point(source.getConnectionPoint().getX(), source.getConnectionPoint().getY())
-        );
+        if (source instanceof Pin) {
+            mousePosition.set(
+                    new Point(((Pin) source).getConnectionPoint().getX(), ((Pin) source).getConnectionPoint().getY())
+            );
+        } else {
+            mousePosition.set(
+                    new Point(((ChipPin) source).getConnectionPoint().getX(), ((ChipPin) source).getConnectionPoint().getY())
+            );
+        }
 
         this.line = new Polyline();
         line.setStrokeLineJoin(StrokeLineJoin.ROUND);
@@ -52,21 +58,35 @@ public class Wire {
     }
 
     private void handleSourceMovement() {
-        source.getPane()
+        if (source instanceof ChipPin) {
+            ((ChipPin) source).getParent().getPane().layoutXProperty().addListener((o, n, t) -> updateLine());
+            ((ChipPin) source).getParent().getPane().layoutYProperty().addListener((o, n, t) -> updateLine());
+        } else {
+            ((Pin) source).getPane()
                 .layoutYProperty()
                 .addListener((observableValue, number, t1) -> updateLine());
+        }
     }
 
     private void handleDestinationPinMovement() {
-        destination.getPane()
+        if (destination instanceof ChipPin) {
+            ((ChipPin) destination).getParent().getPane().layoutXProperty().addListener((o, n, t) -> updateLine());
+            ((ChipPin) destination).getParent().getPane().layoutYProperty().addListener((o, n, t) -> updateLine());
+        } else {
+            ((Pin) destination).getPane()
                 .layoutYProperty()
                 .addListener((observableValue, number, t1) -> updateLine());
+        }
     }
 
     private void updateLine() {
         line.getPoints().clear();
 
-        Point sourceLocation = source.getConnectionPoint();
+        Point sourceLocation;
+        if (source instanceof Pin)
+            sourceLocation = ((Pin) source).getConnectionPoint();
+        else
+            sourceLocation = ((ChipPin) source).getConnectionPoint();
         line.getPoints().addAll(sourceLocation.getX(), sourceLocation.getY());
 
         for (Point p : points) {
@@ -76,7 +96,12 @@ public class Wire {
         if (destination == null) {
             line.getPoints().addAll(mousePosition.get().getX(), mousePosition.get().getY());
         } else {
-            Point destinationLocation = destination.getConnectionPoint();
+            Point destinationLocation;
+            if (destination instanceof Pin)
+                destinationLocation = ((Pin) destination).getConnectionPoint();
+            else
+                destinationLocation = ((ChipPin) destination).getConnectionPoint();
+
             line.getPoints().addAll(destinationLocation.getX(), destinationLocation.getY());
         }
     }
@@ -114,37 +139,70 @@ public class Wire {
         setInputAndOutputPins();
         listenForStateChanges();
     }
+    public void setDestination(ChipPin destination) {
+        this.destination = destination;
+        handleDestinationPinMovement();
+        updateLine();
+
+        /*
+          Doing things after completing the wire.
+         */
+        setInputAndOutputPins();
+        listenForStateChanges();
+    }
     private void setInputAndOutputPins() {
         if (source instanceof InputPin) {
             inputPin = (InputPin) source;
-            outputPin = (OutputPin) destination;
-        } else {
-            inputPin = (InputPin) destination;
+        } else if (source instanceof OutputPin) {
             outputPin = (OutputPin) source;
+        } else if (source instanceof OutputChipPin) {
+            inputFromChip = (OutputChipPin) source;
+        } else {
+            outputToChip = (InputChipPin) source;
         }
+        if (destination instanceof InputPin) {
+            inputPin = (InputPin) destination;
+        } else if (destination instanceof OutputPin) {
+            outputPin = (OutputPin) destination;
+        } else if (destination instanceof InputChipPin) {
+            outputToChip = (InputChipPin) destination;
+        } else {
+            inputFromChip = (OutputChipPin) destination;
+        }
+
     }
     private void listenForStateChanges() {
-        inputPin.getState().addListener((observableValue, number, t1) -> {
-            state.set(t1);
-            propagateStateToOutput();
-        });
+        if(inputPin != null)
+            inputPin.getState().addListener((observableValue, number, t1) -> {
+                state.set(t1);
+                propagateStateToOutput();
+            });
+        else
+            inputFromChip.getState().addListener((observableValue, number, t1) -> {
+                state.set(t1);
+                propagateStateToOutput();
+            });
     }
 
     private void propagateStateToOutput() {
         ObservableList<Wire> filteredWires = Main.wires.filtered(
             wire -> (wire.getState().get() == State.HIGH && wire.getOutputPin() == outputPin)
         );
-        if (filteredWires.size() == 0) {
+
+        if (outputPin != null)
             outputPin.setState(state.get());
-        } else {
-            outputPin.setState(State.HIGH);
-        }
+        else
+            outputToChip.setState(state.get());
     }
 
     public void setMousePosition(Point p) {
         Point lastPoint;
-        if (points.size() == 0)
-            lastPoint = source.getConnectionPoint();
+        if (points.size() == 0){
+                if (source instanceof Pin)
+                    lastPoint = ((Pin) source).getConnectionPoint();
+                else
+                   lastPoint = ((ChipPin) source).getConnectionPoint();
+            }
         else
             lastPoint = points.get(points.size() - 1);
 
@@ -154,7 +212,6 @@ public class Wire {
         p = new Point(lastPoint.getX() + hypo * Math.cos(angle), lastPoint.getY() - hypo * Math.sin(angle));
         mousePosition.set(p);
     }
-
     private double getAngle(Point p1, Point p2) {
         double angle = Math.atan2(Math.abs(p2.getY() - p1.getY()), Math.abs(p2.getX() - p1.getX()));
 
@@ -169,13 +226,12 @@ public class Wire {
         }
         return angle;
     }
-
     private double getHypo(Point p1, Point p2) {
         double perp = Math.abs(p2.getY() - p1.getY());
         double base = Math.abs(p2.getX() - p1.getX());
         return Math.sqrt(perp * perp + base * base) - Size.MOUSE_MARGIN;
     }
-    public Pin getSourcePin() {
+    public Object getSourcePin() {
         return source;
     }
     public SimpleObjectProperty<State> getState() {
@@ -184,7 +240,6 @@ public class Wire {
     public OutputPin getOutputPin() {
         return outputPin;
     }
-
     public void addPoint(Point p) {
         points.add(p);
     }

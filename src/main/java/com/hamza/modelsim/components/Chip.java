@@ -4,6 +4,9 @@ import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.constants.ChipConstants;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.State;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.*;
@@ -11,18 +14,17 @@ import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import org.jetbrains.annotations.NotNull;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Scriptable;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class Chip {
     private String name;
     private String[] functions;
     private Point position;
 
-    private final BorderPane chip;
+    private final AnchorPane chip;
 
     private List<InputChipPin> inputPins;
     private List<OutputChipPin> outputPins;
@@ -30,7 +32,10 @@ public class Chip {
     private List<String> inputs;
     private List<String> outputs;
 
-    private int sizeFactor;
+    private ObservableList<State> inputValues;
+    private ObservableList<State> outputValues;
+
+    private final int sizeFactor;
 
     private double xOffset;
     private double yOffset;
@@ -48,9 +53,12 @@ public class Chip {
         this.outputs = getOutputs();
         this.inputs = getInputs();
 
+        inputValues = FXCollections.observableArrayList();
+        outputValues = FXCollections.observableArrayList();
+
         sizeFactor = Math.max(inputs.size(), outputs.size());
 
-        chip = new BorderPane();
+        chip = new AnchorPane();
         chip.setLayoutX(position.getX());
         chip.setLayoutY(position.getY());
         chip.setPrefWidth(ChipConstants.chipWidth);
@@ -64,22 +72,87 @@ public class Chip {
         }
         chip.setPrefHeight(height);
 
+
         addInputPins();
 
         Text nameText = new Text(name);
         nameText.setFill(Colors.white);
         nameText.setFont(new Font("Arial", 18));
-        HBox.setHgrow(nameText, Priority.ALWAYS);
 
-        BorderPane.setAlignment(nameText, Pos.CENTER);
-        chip.setCenter(nameText);
+        nameText.setLayoutX(ChipConstants.chipWidth / 2 - nameText.getBoundsInLocal().getWidth() / 2);
+        nameText.setLayoutY(height / 2 + height / 12);
 
+        chip.getChildren().add(nameText);
         addOutputPins();
 
+        // Behaviours
         makeChipDraggable();
-
+        initializeInputValues();
+        observeChangesInInputs();
+        updateConnectionPoints();
+        updateOutputs();
+        listenToChangesInOutputs();
     }
 
+    private void listenToChangesInOutputs() {
+        outputValues.addListener((ListChangeListener<? super State>) change -> {
+            for(int i = 0; i < outputValues.size(); i++)
+                outputPins.get(i).setState(outputValues.get(i));
+        });
+    }
+
+    private void initializeInputValues() {
+        inputValues.clear();
+        inputPins.forEach(pin -> inputValues.add(pin.getState().getValue()));
+    }
+    private void observeChangesInInputs() {
+        inputPins.forEach(pin -> {
+            pin.getState().addListener((observableValue, state, t1) -> {
+                initializeInputValues();
+                updateOutputs();
+            });
+        });
+    }
+    private void updateOutputs() {
+        outputValues.clear();
+        for(var expression : functions) {
+            boolean result = solveExpression(expression);
+            outputValues.add(result ? State.HIGH : State.LOW);
+        }
+    }
+    private boolean solveExpression(String expression) {
+        Context context = Context.enter();
+        Object result;
+        try {
+            Scriptable scope = context.initStandardObjects();
+            expression = extractExpression(expression, extractInputs(expression));
+            result = executeFunction(context, expression, scope);
+        } finally {
+            Context.exit();
+        }
+        return (Boolean) result;
+    }
+    private Object executeFunction(Context context, String expression, Scriptable scope) {
+        String function = "function solveBooleanFunction() { return " + expression + "; }";
+        context.evaluateString(scope, function, "BooleanFunction", 1, null);
+        Object solveFunction = scope.get("solveBooleanFunction", scope);
+        org.mozilla.javascript.Function javaFunction = (org.mozilla.javascript.Function) solveFunction;
+        return javaFunction.call(context, scope, scope, new Object[] {});
+    }
+    @NotNull
+    private String extractExpression(String expression, List<String> inputs) {
+        expression = expression
+            .substring(expression.indexOf("=") + 1)
+            .replaceAll("&", "&&")
+            .replaceAll("\\|", "||");
+
+        for(var input : inputs) {
+            int index = this.inputs.indexOf(input);
+            State state = inputValues.get(index);
+            expression = expression.replace(input, ((Boolean)(state == State.HIGH)).toString());
+        }
+        return expression;
+    }
     private void makeChipDraggable() {
         chip.setOnMousePressed(e -> {
             xOffset = e.getSceneX() - chip.getLayoutX();
@@ -91,54 +164,57 @@ public class Chip {
         });
         chip.setOnMouseDragged(e -> {
             chip.setLayoutX(e.getSceneX() - xOffset);
-            chip.setLayoutY(e.getSceneY() - yOffset);
+            chip.setLayoutY(e.
+                    getSceneY() - yOffset);
+
+            updateConnectionPoints();
         });
     }
 
+    private void updateConnectionPoints() {
+        List<ChipPin> combined = new ArrayList<>(inputPins);
+        combined.addAll(outputPins);
+        combined.forEach(pin -> pin.setConnectionPoint(calculateConnectionPoint(pin.getConnector())));
+    }
+
     private void addInputPins() {
-        FlowPane inputCirclePane = getPinsPane(inputs, "input");
-        BorderPane.setAlignment(inputCirclePane, Pos.CENTER_LEFT);
-        chip.setLeft(inputCirclePane);
+
+        for(int i = 0; i < inputs.size(); i++) {
+            Circle pin = new Circle(ChipConstants.chipPinRadius);
+            pin.setCenterX(ChipConstants.chipPinRadius);
+            pin.setCenterY(getCenterYForPinCircle(i));
+            pin.setFill(Colors.terminalGreyColor);
+            addToolTipToPin(inputs, i, pin);
+
+            var inputPin = new InputChipPin(State.LOW, pin, this);
+            inputPin.setConnectionPoint(new Point(pin.getCenterX(), pin.getCenterY()));
+            inputPins.add(inputPin);
+
+            chip.getChildren().add(pin);
+        }
+    }
+
+    private double getCenterYForPinCircle(int index) {
+        return ChipConstants.chipPinMargin + ChipConstants.chipPinRadius * (2 * index + 1) + ChipConstants.chipPinGap * index;
     }
 
     private void addOutputPins() {
-        FlowPane outputCirclePane = getPinsPane(outputs, "output");
-        BorderPane.setAlignment(outputCirclePane, Pos.CENTER_RIGHT);
-        chip.setRight(outputCirclePane);
-    }
+        for(int i = 0; i < outputs.size(); i++) {
+            Circle pin = new Circle(ChipConstants.chipPinRadius);
+            pin.setCenterX(chip.getPrefWidth() - ChipConstants.chipPinRadius);
+            pin.setCenterY(getCenterYForPinCircle(i));
+            pin.setFill(Colors.terminalGreyColor);
+            addToolTipToPin(outputs, i, pin);
 
-    @NotNull
-    private FlowPane getPinsPane(List<String> list, String type) {
-        FlowPane circlePane = getFlowPane();
-        for (int i = 0; i < list.size(); i++) {
-            Circle pin = getPinCircle(i, list);
-            circlePane.getChildren().add(pin);
-            if (type.equals("input")) {
-                inputPins.add(new InputChipPin(State.LOW, pin));
-            } else {
-                outputPins.add(new OutputChipPin(State.LOW, pin));
-            }
+            var outputPin = new OutputChipPin(State.LOW, pin, this);
+            outputPin.setConnectionPoint(new Point(pin.getCenterX(), pin.getCenterY()));
+            outputPins.add(outputPin);
+
+            chip.getChildren().add(pin);
         }
-        circlePane.setLayoutX(type.equals("input") ? 0 : chip.getPrefWidth() - circlePane.getBoundsInLocal().getWidth());
-        return circlePane;
     }
-
-    @NotNull
-    private static FlowPane getFlowPane() {
-        FlowPane inputCirclePane = new FlowPane();
-        inputCirclePane.setVgap(ChipConstants.chipPinGap);
-        inputCirclePane.setPrefWrapLength(ChipConstants.chipPinRadius * 2);
-        inputCirclePane.setAlignment(Pos.CENTER);
-        return inputCirclePane;
-    }
-
-    @NotNull
-    private Circle getPinCircle(int i, List<String> list) {
-        Circle pin = new Circle();
-        pin.setRadius(ChipConstants.chipPinRadius);
-        pin.setFill(Colors.terminalBaseColor);
-        addToolTipToPin(list, i, pin);
-        return pin;
+    private Point calculateConnectionPoint(Circle pin) {
+        return new Point(pin.getBoundsInLocal().getCenterX() + chip.getLayoutX(), pin.getBoundsInLocal().getCenterY() + chip.getLayoutY());
     }
 
     private void addToolTipToPin(List<String> inputs, int i, Circle pin) {
@@ -182,7 +258,7 @@ public class Chip {
             .split("\\s*(AND|OR|NOT)\\s*");
 
         for (String token : tokens) {
-            if (!token.matches("(AND|OR|NOT)")) {
+            if (!token.matches("(AND|OR|NOT)") && token.length() > 0) {
                 inputsSet.add(token);
             }
         }
@@ -198,7 +274,7 @@ public class Chip {
     public void draw(Canvas canvas) {
         canvas.getDrawable().getChildren().add(chip);
     }
-    public BorderPane getPane() {
+    public AnchorPane getPane() {
         return chip;
     }
 
