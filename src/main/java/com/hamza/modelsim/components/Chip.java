@@ -4,12 +4,13 @@ import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.constants.ChipConstants;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.State;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.geometry.Pos;
 import javafx.scene.control.Tooltip;
-import javafx.scene.layout.*;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Background;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -17,34 +18,33 @@ import org.jetbrains.annotations.NotNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class Chip {
-    private String name;
-    private String[] functions;
-    private Point position;
-
     private final AnchorPane chip;
+    private final String name;
+    private final String[] functions;
+    private final SimpleObjectProperty<Point> position;
+    private final List<InputChipPin> inputPins;
+    private final List<OutputChipPin> outputPins;
 
-    private List<InputChipPin> inputPins;
-    private List<OutputChipPin> outputPins;
+    private final List<String> inputs;
+    private final List<String> outputs;
 
-    private List<String> inputs;
-    private List<String> outputs;
-
-    private ObservableList<State> inputValues;
-    private ObservableList<State> outputValues;
+    private final ObservableList<State> inputValues;
+    private final ObservableList<State> outputValues;
 
     private double xOffset;
     private double yOffset;
 
-    public Chip(String name, String function, Point position) {
-        this(name, new String[] {function}, position);
-    }
     public Chip(String name, String[] functions, Point position) {
         this.name = name;
         this.functions = functions;
-        this.position = position;
+        this.position = new SimpleObjectProperty<>();
+        this.position.set(position);
         inputPins = new ArrayList<>();
         outputPins = new ArrayList<>();
 
@@ -55,10 +55,15 @@ public class Chip {
         outputValues = FXCollections.observableArrayList();
 
         chip = new AnchorPane();
-        chip.setLayoutX(position.getX());
-        chip.setLayoutY(position.getY());
+        chip.setLayoutX(this.position.get().getX());
+        chip.setLayoutY(this.position.get().getY());
         chip.setPrefWidth(ChipConstants.chipWidth);
         chip.setBackground(Background.fill(Colors.chipColor));
+
+        this.position.addListener(change -> {
+            chip.setLayoutX(this.position.get().getX());
+            chip.setLayoutY(this.position.get().getY());
+        });
 
         double height;
         if (inputs.size() >= outputs.size()) {
@@ -91,14 +96,17 @@ public class Chip {
         updateOutputPins();
     }
 
+    public static String extractFunctionName(String expression) {
+        int equalsIndex = expression.indexOf("=");
+        return expression.substring(0, equalsIndex).trim();
+    }
+
     private void listenToChangesInOutputs() {
-        outputValues.addListener((ListChangeListener<? super State>) change -> {
-            updateOutputPins();
-        });
+        outputValues.addListener((ListChangeListener<? super State>) change -> updateOutputPins());
     }
 
     private void updateOutputPins() {
-        for(int i = 0; i < outputValues.size(); i++)
+        for (int i = 0; i < outputValues.size(); i++)
             outputPins.get(i).setState(outputValues.get(i));
     }
 
@@ -106,21 +114,22 @@ public class Chip {
         inputValues.clear();
         inputPins.forEach(pin -> inputValues.add(pin.getState().getValue()));
     }
+
     private void observeChangesInInputs() {
-        inputPins.forEach(pin -> {
-            pin.getState().addListener((observableValue, state, t1) -> {
-                initializeInputValues();
-                updateOutputs();
-            });
-        });
+        inputPins.forEach(pin -> pin.getState().addListener((observableValue, state, t1) -> {
+            initializeInputValues();
+            updateOutputs();
+        }));
     }
+
     private void updateOutputs() {
         outputValues.clear();
-        for(var expression : functions) {
+        for (var expression : functions) {
             boolean result = solveExpression(expression);
             outputValues.add(result ? State.HIGH : State.LOW);
         }
     }
+
     private boolean solveExpression(String expression) {
         Context context = Context.enter();
         Object result;
@@ -133,27 +142,30 @@ public class Chip {
         }
         return (Boolean) result;
     }
+
     private Object executeFunction(Context context, String expression, Scriptable scope) {
         String function = "function solveBooleanFunction() { return " + expression + "; }";
         context.evaluateString(scope, function, "BooleanFunction", 1, null);
         Object solveFunction = scope.get("solveBooleanFunction", scope);
         org.mozilla.javascript.Function javaFunction = (org.mozilla.javascript.Function) solveFunction;
-        return javaFunction.call(context, scope, scope, new Object[] {});
+        return javaFunction.call(context, scope, scope, new Object[]{});
     }
+
     @NotNull
     private String extractExpression(String expression, List<String> inputs) {
         expression = expression
-            .substring(expression.indexOf("=") + 1)
-            .replaceAll("&", "&&")
-            .replaceAll("\\|", "||");
+                .substring(expression.indexOf("=") + 1)
+                .replaceAll("&", "&&")
+                .replaceAll("\\|", "||");
 
-        for(var input : inputs) {
+        for (var input : inputs) {
             int index = this.inputs.indexOf(input);
             State state = inputValues.get(index);
-            expression = expression.replace(input, ((Boolean)(state == State.HIGH)).toString());
+            expression = expression.replace(input, ((Boolean) (state == State.HIGH)).toString());
         }
         return expression;
     }
+
     private void makeChipDraggable() {
         chip.setOnMousePressed(e -> {
             xOffset = e.getSceneX() - chip.getLayoutX();
@@ -180,7 +192,7 @@ public class Chip {
 
     private void addInputPins() {
 
-        for(int i = 0; i < inputs.size(); i++) {
+        for (int i = 0; i < inputs.size(); i++) {
             Circle pin = new Circle(ChipConstants.chipPinRadius);
             pin.setCenterX(ChipConstants.chipPinRadius);
             pin.setCenterY(getCenterYForPinCircle(i));
@@ -200,7 +212,7 @@ public class Chip {
     }
 
     private void addOutputPins() {
-        for(int i = 0; i < outputs.size(); i++) {
+        for (int i = 0; i < outputs.size(); i++) {
             Circle pin = new Circle(ChipConstants.chipPinRadius);
             pin.setCenterX(chip.getPrefWidth() - ChipConstants.chipPinRadius);
             pin.setCenterY(getCenterYForPinCircle(i));
@@ -214,6 +226,7 @@ public class Chip {
             chip.getChildren().add(pin);
         }
     }
+
     private Point calculateConnectionPoint(Circle pin) {
         return new Point(pin.getBoundsInLocal().getCenterX() + chip.getLayoutX(), pin.getBoundsInLocal().getCenterY() + chip.getLayoutY());
     }
@@ -240,7 +253,7 @@ public class Chip {
     private List<String> getInputs() {
         Set<String> inputs = new HashSet<>();
 
-        for(var function : functions) {
+        for (var function : functions) {
             inputs.addAll(extractInputs(function));
         }
 
@@ -251,12 +264,12 @@ public class Chip {
         Set<String> inputsSet = new HashSet<>();
         int equalsIndex = expression.indexOf("=");
         String[] tokens = expression
-            .replaceAll("&", "AND")
-            .replaceAll("\\|", "OR")
-            .replaceAll("!", "NOT")
-            .substring(equalsIndex + 1)
-            .replaceAll("[()]", "")
-            .split("\\s*(AND|OR|NOT)\\s*");
+                .replaceAll("&", "AND")
+                .replaceAll("\\|", "OR")
+                .replaceAll("!", "NOT")
+                .substring(equalsIndex + 1)
+                .replaceAll("[()]", "")
+                .split("\\s*(AND|OR|NOT)\\s*");
 
         for (String token : tokens) {
             if (!token.matches("(AND|OR|NOT)") && token.length() > 0) {
@@ -267,14 +280,10 @@ public class Chip {
         return new ArrayList<>(inputsSet);
     }
 
-    public static String extractFunctionName(String expression) {
-        int equalsIndex = expression.indexOf("=");
-        return expression.substring(0, equalsIndex).trim();
-    }
-
     public void draw(Canvas canvas) {
         canvas.getDrawable().getChildren().add(chip);
     }
+
     public AnchorPane getPane() {
         return chip;
     }
@@ -282,18 +291,12 @@ public class Chip {
     public List<InputChipPin> getInputPins() {
         return inputPins;
     }
+
     public List<OutputChipPin> getOutputPins() {
         return outputPins;
     }
-    public Point[] getInputPoints() {
-        return getPointsArrayOf(inputPins.stream().map(ChipPin::getConnector).toList());
-    }
-    public Point[] getOutputPoints() {
-        return getPointsArrayOf(outputPins.stream().map(ChipPin::getConnector).toList());
-    }
-    private Point[] getPointsArrayOf(List<Circle> list) {
-        return list.stream()
-            .map(circle -> new Point(chip.getLayoutX() + circle.getCenterX(), chip.getLayoutY() + circle.getCenterY()))
-            .toArray(Point[]::new);
+
+    public void setPosition(Point position) {
+        this.position.set(position);
     }
 }

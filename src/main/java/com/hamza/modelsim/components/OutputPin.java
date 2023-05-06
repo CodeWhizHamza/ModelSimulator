@@ -10,7 +10,7 @@ import javafx.scene.layout.Pane;
 public class OutputPin extends Pin {
     private static int terminalsCount = 0;
     private String name;
-    private SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
+    private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
 
     public OutputPin(double y) {
         super(y);

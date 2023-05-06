@@ -1,6 +1,5 @@
 package com.hamza.modelsim.components;
 
-import com.hamza.modelsim.Main;
 import com.hamza.modelsim.abstractcomponents.Pin;
 import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.constants.Colors;
@@ -58,22 +57,19 @@ public class Wire {
     }
 
     private void handleSourceMovement() {
+        updateLineForChangesIn(source);
+    }
+
+    private void handleDestinationPinMovement() {
+        updateLineForChangesIn(destination);
+    }
+
+    private void updateLineForChangesIn(Object source) {
         if (source instanceof ChipPin) {
             ((ChipPin) source).getParent().getPane().layoutXProperty().addListener((o, n, t) -> updateLine());
             ((ChipPin) source).getParent().getPane().layoutYProperty().addListener((o, n, t) -> updateLine());
         } else {
             ((Pin) source).getPane()
-                .layoutYProperty()
-                .addListener((observableValue, number, t1) -> updateLine());
-        }
-    }
-
-    private void handleDestinationPinMovement() {
-        if (destination instanceof ChipPin) {
-            ((ChipPin) destination).getParent().getPane().layoutXProperty().addListener((o, n, t) -> updateLine());
-            ((ChipPin) destination).getParent().getPane().layoutYProperty().addListener((o, n, t) -> updateLine());
-        } else {
-            ((Pin) destination).getPane()
                 .layoutYProperty()
                 .addListener((observableValue, number, t1) -> updateLine());
         }
@@ -229,12 +225,7 @@ public class Wire {
     public Object getSourcePin() {
         return source;
     }
-    public SimpleObjectProperty<State> getState() {
-        return state;
-    }
-    public OutputPin getOutputPin() {
-        return outputPin;
-    }
+
     public void addPoint(Point p) {
         points.add(p);
     }

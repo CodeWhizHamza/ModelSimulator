@@ -2,6 +2,9 @@ package com.hamza.modelsim.components;
 
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.LayoutConstants;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -12,29 +15,53 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.HBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import org.jetbrains.annotations.NotNull;
 
 
 public class MenuBar {
     private final HBox container;
     private final Scene scene;
+    private final ObservableList<Button> buttons;
 
     public MenuBar(Scene scene) {
         this.scene = scene;
-        container = new HBox();
+        container = createContainer();
+        buttons = FXCollections.observableArrayList();
 
+        addShowMenuButton();
+        populateMenu();
+        buttons.addListener((ListChangeListener<? super Button>) change -> populateMenu());
+    }
+
+    private void addShowMenuButton() {
+        Button button = new Button("MENU");
+        button.setOnAction(this::showMenu);
+        addButton(button);
+    }
+
+    public void clearButtons() {
+        buttons.clear();
+        addShowMenuButton();
+    }
+
+    public void addButton(Button button) {
+        buttons.add(button);
+    }
+
+    @NotNull
+    private HBox createContainer() {
+        final HBox container;
+        container = new HBox();
         container.setAlignment(Pos.CENTER_LEFT);
         container.setPrefWidth(Screen.getPrimary().getBounds().getWidth());
         container.setPrefHeight(LayoutConstants.menuHeight);
         container.setBackground(Background.fill(Colors.menusColor));
-
-        populateMenu();
-
+        return container;
     }
 
     public void populateMenu() {
-        Button button = new Button("MENU");
-        button.setOnAction(this::showMenu);
-        container.getChildren().add(button);
+        container.getChildren().clear();
+        container.getChildren().addAll(buttons);
     }
 
     public void showMenu(Event event) {
@@ -52,7 +79,6 @@ public class MenuBar {
         menuContainer.getItems().add(new MenuItem("SAVE COMPONENT"));
         menuContainer.getItems().add(new MenuItem("SAVE PROJECT"));
         menuContainer.getItems().add(quitMenu);
-
         menuContainer.show(scene.getWindow(), 0, 500);
     }
 

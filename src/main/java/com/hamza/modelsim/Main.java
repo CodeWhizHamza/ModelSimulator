@@ -1,45 +1,37 @@
 package com.hamza.modelsim;
 
-import com.hamza.modelsim.abstractcomponents.Point;
+import com.hamza.modelsim.abstractcomponents.*;
 import com.hamza.modelsim.components.*;
-import com.hamza.modelsim.constants.Colors;
-import com.hamza.modelsim.constants.TerminalConstants;
+import com.hamza.modelsim.constants.*;
 import javafx.application.Application;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
+import javafx.collections.*;
 import javafx.event.EventHandler;
-import javafx.geometry.Point2D;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.input.ContextMenuEvent;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.control.Button;
+import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Polyline;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.transform.Transform;
-import javafx.stage.Screen;
-import javafx.stage.Stage;
+import javafx.scene.shape.*;
+import javafx.stage.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URL;
 import java.util.Objects;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Scriptable;
 
 public class Main extends Application {
     public static ObservableList<InputPin> inputPins;
     public static ObservableList<OutputPin> outputPins;
     public static ObservableList<Wire> wires;
     public static ObservableList<Chip> chips;
+    public static ObservableList<ChipLabel> availableChips;
     public static Scene scene;
     public static Canvas canvas;
 
     private boolean isWireDrawing;
+    private boolean isChipDrawing;
+
+    private Point mousePosition;
 
     public static void main(String[] args) {
         launch(args);
@@ -57,71 +49,38 @@ public class Main extends Application {
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
         chips = FXCollections.observableArrayList();
+        availableChips = FXCollections.observableArrayList();
+
         isWireDrawing = false;
+        isChipDrawing = false;
 
-        VBox root = new VBox();
-        root.setBackground(Background.fill(Colors.backgroundColor));
-        root.setFillWidth(true);
-        root.setSpacing(0);
+        mousePosition = new Point();
+
+        VBox root = createRoot();
         scene = new Scene(root);
-
-        URL stylesheetURLCanBeNull = getClass().getClassLoader().getResource("main.css");
-        String stylesheet = Objects.requireNonNull(stylesheetURLCanBeNull).toExternalForm();
-        scene.getStylesheets().add(stylesheet);
-
+        addStyleSheet();
         canvas = new Canvas();
         MenuBar menuBar = new MenuBar(scene);
 
-        /*
-          When user clicks on the input pin, a wire will start drawing
-          setting isWireDrawing = true, and the starting position of wire
-          to the clicked location of mouse.
-         */
-        inputPins.addListener((ListChangeListener<? super InputPin>) change -> inputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> {
-            if (e.getButton() != MouseButton.PRIMARY) return;
-
-            // if wire is already drawing, no need to draw another one.
-            if (isWireDrawing) {
-                Wire currentWire = wires.get(wires.size() - 1);
-                if (currentWire.getSourcePin() instanceof InputPin) return;
-                currentWire.setDestination(pin);
-                isWireDrawing = false;
-            } else {
-                isWireDrawing = true;
-                wires.add(new Wire(pin));
-            }
-
-        })));
-
-        /*
-          When wire is drawing and output pin is clicked, wire gets completed.
-         */
-        outputPins.addListener((ListChangeListener<? super OutputPin>) change -> {
-            for (var pin : outputPins) {
-                pin.getConnector().setOnMouseClicked(e -> {
-                    if (e.getButton() != MouseButton.PRIMARY) return;
-
-                    if (isWireDrawing) {
-                        Wire currentWire = wires.get(wires.size() - 1);
-                        if (currentWire.getSourcePin() instanceof OutputPin) return;
-                        currentWire.setDestination(pin);
-                        isWireDrawing = false;
-                    } else {
-                        isWireDrawing = true;
-                        wires.add(new Wire(pin));
-                    }
-                });
-            }
-        });
+        inputPins.addListener((ListChangeListener<? super InputPin>) change -> inputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleInputPinClicked(pin, e))));
+        outputPins.addListener((ListChangeListener<? super OutputPin>) change -> outputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputPinClicked(pin, e))));
+        chips.addListener((ListChangeListener<? super Chip>) change -> chips.forEach(chip -> {
+            chip.getInputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleInputChipPinClicked(pin, e)));
+            chip.getOutputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputChipPinClicked(pin, e)));
+        }));
 
         scene.setOnMouseClicked(e -> {
-            // We will only register mid-points, when the empty area (pane) is clicked.
-            if(!(e.getTarget() instanceof Pane)) return;
+            if (!(e.getTarget() instanceof Pane)) return;
 
-            /*
-            Register point on Left click.
-            Delete current wire on right click.
-             */
+            if (e.getButton() == MouseButton.PRIMARY && chips.size() > 0 && isChipDrawing) {
+                chips.get(chips.size() - 1).setPosition(new Point(e.getSceneX(), e.getSceneY()));
+                isChipDrawing = false;
+            } else if (e.getButton() == MouseButton.SECONDARY){
+                if(chips.size() == 0 || !isChipDrawing) return;
+                chips.remove(chips.size() - 1);
+                isChipDrawing = false;
+            }
+
             if (e.getButton() == MouseButton.PRIMARY && wires.size() > 0 && isWireDrawing) {
                 wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
             } else if (e.getButton() == MouseButton.SECONDARY) {
@@ -131,8 +90,15 @@ public class Main extends Application {
             }
         });
         scene.setOnMouseMoved(e -> {
-            if (wires.size() == 0 || !isWireDrawing) return;
-            wires.get(wires.size() - 1).setMousePosition(new Point(e.getSceneX(), e.getSceneY()));
+            mousePosition.setX(e.getSceneX());
+            mousePosition.setY(e.getSceneY());
+
+            if (wires.size() != 0 && isWireDrawing) {
+                wires.get(wires.size() - 1).setMousePosition(new Point(e.getSceneX(), e.getSceneY()));
+            }
+            if(chips.size() != 0 && isChipDrawing) {
+                chips.get(chips.size() - 1).setPosition(new Point(mousePosition.getX(), mousePosition.getY()));
+            }
         });
 
         // redraw when wires array changes.
@@ -144,6 +110,27 @@ public class Main extends Application {
 
         root.getChildren().add(canvas.getDrawable());
         root.getChildren().add(menuBar.getDrawable());
+        menuBar.getDrawable().getChildren().addListener((ListChangeListener<? super Node>) change -> {
+            root.getChildren().removeIf(node -> node == menuBar.getDrawable());
+            root.getChildren().add(menuBar.getDrawable());
+        });
+
+        availableChips.addListener((ListChangeListener<? super ChipLabel>) change -> {
+            menuBar.clearButtons();
+            availableChips.forEach(chip -> {
+                Button button = new Button(chip.getName());
+                button.setOnAction(e -> {
+                    isChipDrawing = true;
+                    chips.add(new Chip(chip.getName(), chip.getFunctions(), new Point(mousePosition.getX(), mousePosition.getY() + 20)));
+                });
+                menuBar.addButton(button);
+            });
+        });
+
+        // * Add default 3 gates.
+        availableChips.add(new ChipLabel("NOT", "F=!A"));
+        availableChips.add(new ChipLabel("AND", "F=A&B"));
+        availableChips.add(new ChipLabel("OR", "F=A|B"));
 
         double xPosition = 0;
         double yPosition = 8;
@@ -174,46 +161,85 @@ public class Main extends Application {
 
         // CHIPS
         chips.addListener((ListChangeListener<? super Chip>) change -> {
-            chips.forEach(chip -> {
-                chip.getInputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> {
-                    if (e.getButton() != MouseButton.PRIMARY) return;
+            ObservableList<Node> children = canvas.getDrawable().getChildren();
+            children.removeIf(child -> child instanceof AnchorPane);
 
-                    if (isWireDrawing) {
-                        Wire currentWire = wires.get(wires.size() - 1);
-                        if (currentWire.getSourcePin() instanceof InputChipPin) return;
-                        currentWire.setDestination(pin);
-                        isWireDrawing = false;
-                    } else {
-                        isWireDrawing = true;
-                        wires.add(new Wire(pin));
-                    }
-                }));
-                chip.getOutputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> {
-                    if (e.getButton() != MouseButton.PRIMARY) return;
-
-                    if (isWireDrawing) {
-                        Wire currentWire = wires.get(wires.size() - 1);
-                            if (currentWire.getSourcePin() instanceof OutputChipPin) return;
-                        currentWire.setDestination(pin);
-                        isWireDrawing = false;
-                    } else {
-                        isWireDrawing = true;
-                        wires.add(new Wire(pin));
-                    }
-                }));
-            });
-
-            canvas.getDrawable().getChildren().removeIf(
-                node -> chips.stream().anyMatch(chip -> chip.getPane() == node)
-            );
             chips.forEach(chip -> chip.draw(canvas));
         });
-        chips.add(new Chip("AND", "F=A&B", new Point(450, 300)));
-        chips.add(new Chip("NOT", "F=!A", new Point(450, 450)));
 
         scene.setFill(Colors.backgroundColor);
         mainStage.setScene(scene);
         mainStage.show();
+    }
+
+    private void handleOutputChipPinClicked(OutputChipPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+            if (currentWire.getSourcePin() instanceof OutputChipPin) return;
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    private void handleInputChipPinClicked(InputChipPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+            if (currentWire.getSourcePin() instanceof InputChipPin) return;
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    private void handleOutputPinClicked(OutputPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+            if (currentWire.getSourcePin() instanceof OutputPin) return;
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    private void handleInputPinClicked(InputPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+            if (currentWire.getSourcePin() instanceof InputPin) return;
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    @NotNull
+    private static VBox createRoot() {
+        VBox root = new VBox();
+        root.setBackground(Background.fill(Colors.backgroundColor));
+        root.setFillWidth(true);
+        root.setSpacing(0);
+        return root;
+    }
+
+    private void addStyleSheet() {
+        URL stylesheetURLCanBeNull = getClass().getClassLoader().getResource("main.css");
+        String stylesheet = Objects.requireNonNull(stylesheetURLCanBeNull).toExternalForm();
+        scene.getStylesheets().add(stylesheet);
     }
 
     @NotNull

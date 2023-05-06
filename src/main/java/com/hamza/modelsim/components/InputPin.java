@@ -4,7 +4,6 @@ import com.hamza.modelsim.abstractcomponents.Pin;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.State;
 import com.hamza.modelsim.constants.TerminalConstants;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
@@ -12,8 +11,8 @@ import javafx.scene.text.Text;
 
 public class InputPin extends Pin {
     private static int terminalsCount = 0;
-    private String name;
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
+    private String name;
 
     public InputPin(double y) {
         super(y);
