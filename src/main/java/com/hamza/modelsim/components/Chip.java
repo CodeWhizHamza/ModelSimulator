@@ -35,8 +35,6 @@ public class Chip {
     private ObservableList<State> inputValues;
     private ObservableList<State> outputValues;
 
-    private final int sizeFactor;
-
     private double xOffset;
     private double yOffset;
 
@@ -55,8 +53,6 @@ public class Chip {
 
         inputValues = FXCollections.observableArrayList();
         outputValues = FXCollections.observableArrayList();
-
-        sizeFactor = Math.max(inputs.size(), outputs.size());
 
         chip = new AnchorPane();
         chip.setLayoutX(position.getX());
@@ -92,13 +88,18 @@ public class Chip {
         updateConnectionPoints();
         updateOutputs();
         listenToChangesInOutputs();
+        updateOutputPins();
     }
 
     private void listenToChangesInOutputs() {
         outputValues.addListener((ListChangeListener<? super State>) change -> {
-            for(int i = 0; i < outputValues.size(); i++)
-                outputPins.get(i).setState(outputValues.get(i));
+            updateOutputPins();
         });
+    }
+
+    private void updateOutputPins() {
+        for(int i = 0; i < outputValues.size(); i++)
+            outputPins.get(i).setState(outputValues.get(i));
     }
 
     private void initializeInputValues() {

@@ -128,7 +128,7 @@ public class Wire {
         line.toBack();
     }
 
-    public void setDestination(Pin destination) {
+    public void setDestination(Object destination) {
         this.destination = destination;
         handleDestinationPinMovement();
         updateLine();
@@ -138,18 +138,17 @@ public class Wire {
          */
         setInputAndOutputPins();
         listenForStateChanges();
+        updateState();
+        propagateStateToOutput();
     }
-    public void setDestination(ChipPin destination) {
-        this.destination = destination;
-        handleDestinationPinMovement();
-        updateLine();
+    private void updateState() {
+        if (inputFromChip != null)
+            state.set(inputFromChip.getState().get());
+        else
+            state.set(inputPin.getState().get());
 
-        /*
-          Doing things after completing the wire.
-         */
-        setInputAndOutputPins();
-        listenForStateChanges();
     }
+
     private void setInputAndOutputPins() {
         if (source instanceof InputPin) {
             inputPin = (InputPin) source;
@@ -185,10 +184,6 @@ public class Wire {
     }
 
     private void propagateStateToOutput() {
-        ObservableList<Wire> filteredWires = Main.wires.filtered(
-            wire -> (wire.getState().get() == State.HIGH && wire.getOutputPin() == outputPin)
-        );
-
         if (outputPin != null)
             outputPin.setState(state.get());
         else
