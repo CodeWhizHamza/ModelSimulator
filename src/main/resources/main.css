@@ -30,3 +30,9 @@
     -fx-background-color: #333;
     -fx-cursor: hand;
 }
+
+/* Style chips */
+.anchor-pane {
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}

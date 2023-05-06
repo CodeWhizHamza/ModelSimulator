@@ -16,7 +16,6 @@ public abstract class Pin {
     private final Rectangle extender;
     private final Circle connector;
     private final Circle button;
-    private int state;
 
     public Pin(double y) {
         pane = new Pane();

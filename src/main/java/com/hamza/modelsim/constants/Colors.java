@@ -12,4 +12,6 @@ public class Colors {
     public static Color warmWhite = Color.rgb(200, 200, 200);
     public static Color terminalActiveColor = Color.rgb(235, 59, 90);
     public static Color activeWireColor = Color.rgb(235, 59, 90);
+
+    public static Color chipColor = Color.rgb(52, 152, 219);
 }

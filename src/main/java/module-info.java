@@ -2,6 +2,9 @@ module com.hamza.modelsim {
     requires javafx.controls;
     requires javafx.fxml;
     requires org.jetbrains.annotations;
+    requires java.scripting;
+    requires rhino;
+//    requires java.desktop;
 
     opens com.hamza.modelsim to javafx.fxml;
     exports com.hamza.modelsim.components;

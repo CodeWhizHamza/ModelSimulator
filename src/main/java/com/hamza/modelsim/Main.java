@@ -10,12 +10,11 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Rectangle;
@@ -25,11 +24,14 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.URL;
 import java.util.Objects;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Scriptable;
 
 public class Main extends Application {
     public static ObservableList<InputPin> inputPins;
     public static ObservableList<OutputPin> outputPins;
     public static ObservableList<Wire> wires;
+    public static ObservableList<Chip> chips;
     public static Scene scene;
     public static Canvas canvas;
 
@@ -41,6 +43,22 @@ public class Main extends Application {
 
     @Override
     public void start(Stage mainStage) {
+//        Context context = Context.enter();
+//
+//        try {
+//            Scriptable scope = context.initStandardObjects();
+//            String expression = "A && B || C && D";
+//            String function = "function solveBooleanFunction(A, B, C, D) { return " + expression + "; }";
+//            context.evaluateString(scope, function, "BooleanFunction", 1, null);
+//            Object solveFunction = scope.get("solveBooleanFunction", scope);
+//            org.mozilla.javascript.Function javaFunction = (org.mozilla.javascript.Function) solveFunction;
+//            Object result = javaFunction.call(context, scope, scope, new Object[] { true, false, true, true });
+//            System.out.println("Result: " + result);
+//        } finally {
+//            Context.exit();
+//        }
+
+
         mainStage.setTitle("Model simulator");
         mainStage.setFullScreen(true);
         mainStage.setFullScreenExitHint("");
@@ -49,6 +67,7 @@ public class Main extends Application {
         inputPins = FXCollections.observableArrayList();
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
+        chips = FXCollections.observableArrayList();
         isWireDrawing = false;
 
         VBox root = new VBox();
@@ -112,7 +131,10 @@ public class Main extends Application {
 
         scene.setOnMouseClicked(e -> {
             // We will only register mid-points, when the empty area (pane) is clicked.
-            if(!(e.getTarget() instanceof Pane)) return;
+            boolean isNotFreeSpace = !(e.getTarget() instanceof Pane)
+                    && e.getTarget() instanceof BorderPane
+                    && e.getTarget() instanceof FlowPane;
+            if(isNotFreeSpace) return;
 
             if (e.getButton() == MouseButton.PRIMARY && wires.size() > 0 && isWireDrawing) {
                 wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
@@ -163,6 +185,22 @@ public class Main extends Application {
         outputPinsBase.setOnMouseClicked(addNewOutputTerminal(canvas));
         for (var pin : outputPins)
             pin.draw(canvas.getDrawable());
+
+        // CHIPS
+        chips.addListener((ListChangeListener<? super Chip>) change -> {
+
+            chips.forEach(chip -> {
+
+            });
+
+            canvas.getDrawable().getChildren().removeIf(
+                node -> chips.stream().anyMatch(chip -> chip.getPane() == node)
+            );
+            chips.forEach(chip -> chip.draw(canvas));
+        });
+        chips.add(new Chip("AND", "F=A&B", new Point(450, 450)));
+
+
 
         scene.setFill(Colors.backgroundColor);
         mainStage.setScene(scene);

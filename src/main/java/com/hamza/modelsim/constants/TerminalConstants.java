@@ -10,6 +10,6 @@ public class TerminalConstants {
     public static final double extenderHeight = 8;
     public static final double extenderWidth = 15;
     public static final double buttonRadius = height / 2;
-    public static final double connectorRadius = 7.5;
+    public static final double connectorRadius = 10;
     public static final String name = "Pin";
 }
