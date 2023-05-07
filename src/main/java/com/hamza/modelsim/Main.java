@@ -124,6 +124,28 @@ public class Main extends Application {
             canvas.getDrawable().getChildren().removeIf(node -> node instanceof Polyline);
             wires.forEach(wire -> wire.draw(canvas));
 
+            wires.forEach(wire -> wire.getLine().setOnMouseClicked(e -> {
+                if (e.getButton() != MouseButton.PRIMARY) return;
+                Point position = new Point(mousePosition.getX(), mousePosition.getY());
+
+                if (isWireDrawing) {
+                    if (wire.getOutputPin() != null) {
+
+                    } else if (wire.getInputFromChip() != null) {
+
+                    }
+                } else {
+                    if (wire.getInputPin() != null) {
+                        startWireFromMid(wire, position);
+                        wires.add(new Wire(wire.getInputPin(), position));
+                    } else if (wire.getInputFromChip() != null) {
+                        startWireFromMid(wire, position);
+                        wires.add(new Wire(wire.getInputFromChip(), position));
+                    }
+                    isWireDrawing = true;
+                }
+            }));
+
             wires.forEach(wire -> {
                 ContextMenu contextMenu = new ContextMenu();
                 MenuItem deleteMenuItem = new MenuItem("Delete");
@@ -163,6 +185,10 @@ public class Main extends Application {
         availableChips.add(new ChipLabel("NOT", "F=!A"));
         availableChips.add(new ChipLabel("AND", "F=A&B"));
         availableChips.add(new ChipLabel("OR", "F=A|B"));
+        availableChips.add(new ChipLabel("3 in OR", "F=A|B|C"));
+        availableChips.add(new ChipLabel("3 in AND", "F=A&B&C"));
+        availableChips.add(new ChipLabel("NAND", "F=!(A&B)"));
+        availableChips.add(new ChipLabel("NOR", "F=!(A|B)"));
         availableChips.add(new ChipLabel("7-Seg", ""));
 
 
@@ -228,6 +254,23 @@ public class Main extends Application {
         scene.setFill(Colors.backgroundColor);
         mainStage.setScene(scene);
         mainStage.show();
+    }
+
+    private static void startWireFromMid(Wire wire, Point position) {
+        if (wire.getPoints().size() == 0) {
+            wire.addPoint(position);
+        } else {
+            int lastIndex = wire.getPoints().size() - 1;
+            Point first = wire.getPoints().get(0);
+             Point last = wire.getPoints().get(lastIndex);
+            if (first == last) {
+                if (position.getX() <= first.getX()) {
+                    wire.getPoints().add(0, new Point(position.getX(), position.getY()));
+                } else {
+                    wire.getPoints().add(lastIndex + 1, new Point(position.getX(), position.getY()));
+                }
+            }
+        }
     }
 
     private void showContextMenuOnPinClick(InputPin pin) {
@@ -343,6 +386,7 @@ public class Main extends Application {
         if (isWireDrawing) {
             Wire currentWire = wires.get(wires.size() - 1);
             if (currentWire.getSourcePin() instanceof OutputChipPin) return;
+
             currentWire.setDestination(pin);
             isWireDrawing = false;
         } else {

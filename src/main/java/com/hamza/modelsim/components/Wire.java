@@ -45,6 +45,8 @@ public class Wire {
         propagateStateToOutput();
     };
 
+    private Point startingPosition;
+
     public Wire(Object source) {
         this.source = source;
         this.destination = null;
@@ -73,6 +75,34 @@ public class Wire {
         handlePointsChange();
         handleMouseMovement();
     }
+    public Wire(Object source, Point point) {
+        this.source = source;
+        startingPosition = point;
+        this.destination = null;
+        this.points = FXCollections.observableArrayList();
+        this.state.set(State.LOW);
+        mousePosition = new SimpleObjectProperty<>();
+        if (source instanceof Pin) {
+            mousePosition.set(
+                new Point(((Pin) source).getConnectionPoint().getX(), ((Pin) source).getConnectionPoint().getY())
+            );
+        } else {
+            mousePosition.set(
+                new Point(((ChipPin) source).getConnectionPoint().getX(), ((ChipPin) source).getConnectionPoint().getY())
+            );
+        }
+
+        this.line = new Polyline();
+        line.setStrokeLineJoin(StrokeLineJoin.ROUND);
+        line.setStrokeLineCap(StrokeLineCap.ROUND);
+        line.setStrokeWidth(Size.WIRE_STROKE_SIZE);
+        line.setStroke(Color.WHITE);
+
+        handleSourceMovement();
+        handleStateChange();
+        handlePointsChange();
+        handleMouseMovement();
+    }
 
     private void handleSourceMovement() {
         updateLineForChangesIn(source);
@@ -82,12 +112,12 @@ public class Wire {
         updateLineForChangesIn(destination);
     }
 
-    private void updateLineForChangesIn(Object source) {
-        if (source instanceof ChipPin) {
-            ((ChipPin) source).getParent().getPane().layoutXProperty().addListener(updateLineListener);
-            ((ChipPin) source).getParent().getPane().layoutYProperty().addListener(updateLineListener);
+    private void updateLineForChangesIn(Object pin) {
+        if (pin instanceof ChipPin) {
+            ((ChipPin) pin).getParent().getPane().layoutXProperty().addListener(updateLineListener);
+            ((ChipPin) pin).getParent().getPane().layoutYProperty().addListener(updateLineListener);
         } else {
-            ((Pin) source).getPane()
+            ((Pin) pin).getPane()
                     .layoutYProperty()
                     .addListener(updateLineListener);
         }
@@ -101,7 +131,11 @@ public class Wire {
             sourceLocation = ((Pin) source).getConnectionPoint();
         else
             sourceLocation = ((ChipPin) source).getConnectionPoint();
-        line.getPoints().addAll(sourceLocation.getX(), sourceLocation.getY());
+        if (startingPosition == null) {
+            line.getPoints().addAll(sourceLocation.getX(), sourceLocation.getY());
+        } else {
+            line.getPoints().addAll(startingPosition.getX(), startingPosition.getY());
+        }
 
         for (Point p : points) {
             line.getPoints().addAll(p.getX(), p.getY());
@@ -287,5 +321,9 @@ public class Wire {
 
     public Polyline getLine() {
         return line;
+    }
+
+    public ObservableList<Point> getPoints() {
+        return points;
     }
 }
