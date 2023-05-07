@@ -4,11 +4,16 @@ import com.hamza.modelsim.abstractcomponents.*;
 import com.hamza.modelsim.components.*;
 import com.hamza.modelsim.constants.*;
 import javafx.application.Application;
+import javafx.beans.property.Property;
 import javafx.collections.*;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -72,22 +77,28 @@ public class Main extends Application {
         scene.setOnMouseClicked(e -> {
             if (!(e.getTarget() instanceof Pane)) return;
 
-            if (e.getButton() == MouseButton.PRIMARY && chips.size() > 0 && isChipDrawing) {
-                chips.get(chips.size() - 1).setPosition(new Point(e.getSceneX(), e.getSceneY()));
-                isChipDrawing = false;
-            } else if (e.getButton() == MouseButton.SECONDARY){
-                if(chips.size() == 0 || !isChipDrawing) return;
-                chips.remove(chips.size() - 1);
-                isChipDrawing = false;
+            if (e.getButton() == MouseButton.SECONDARY) {
+                if(isWireDrawing) {
+                    isWireDrawing = false;
+                    wires.remove(wires.size() - 1);
+                }
+                if (isChipDrawing) {
+                    isChipDrawing = false;
+                    chips.remove(chips.size() - 1);
+                }
+            }
+            if (e.getButton() == MouseButton.PRIMARY) {
+                if (chips.size() > 0 && isChipDrawing) {
+                    var chip = chips.get(chips.size() - 1);
+                    chips.remove(chips.size() - 1);
+                    chips.add(new Chip(chip.getName(), chip.getFunctions(), new Point(e.getSceneX(), e.getScreenY())));
+                    isChipDrawing = false;
+                }
+                if ( wires.size() > 0 && isWireDrawing) {
+                    wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
+                }
             }
 
-            if (e.getButton() == MouseButton.PRIMARY && wires.size() > 0 && isWireDrawing) {
-                wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
-            } else if (e.getButton() == MouseButton.SECONDARY) {
-                if (wires.size() == 0 || !isWireDrawing) return;
-                wires.remove(wires.size() - 1);
-                isWireDrawing = false;
-            }
         });
         scene.setOnMouseMoved(e -> {
             mousePosition.setX(e.getSceneX());
@@ -106,6 +117,19 @@ public class Main extends Application {
             // Polyline means it's a wire.
             canvas.getDrawable().getChildren().removeIf(node -> node instanceof Polyline);
             wires.forEach(wire -> wire.draw(canvas));
+
+            for (Wire wire : wires) {
+                ContextMenu contextMenu = new ContextMenu();
+                MenuItem deleteMenuItem = new MenuItem("Delete");
+                deleteMenuItem.setOnAction(event -> {
+                    wire.removeListeners();
+                    wires.remove(wire);
+                });
+                contextMenu.getItems().add(deleteMenuItem);
+                wire.getLine().setOnContextMenuRequested(event -> {
+                    contextMenu.show(wire.getLine(), event.getScreenX(), event.getScreenY());
+                });
+            }
         });
 
         root.getChildren().add(canvas.getDrawable());

@@ -8,6 +8,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.Cursor;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Background;
@@ -193,11 +194,7 @@ public class Chip {
     private void addInputPins() {
 
         for (int i = 0; i < inputs.size(); i++) {
-            Circle pin = new Circle(ChipConstants.chipPinRadius);
-            pin.setCenterX(ChipConstants.chipPinRadius);
-            pin.setCenterY(getCenterYForPinCircle(i));
-            pin.setFill(Colors.terminalGreyColor);
-            addToolTipToPin(inputs, i, pin);
+            Circle pin = getCircle(ChipConstants.chipPinRadius, i, inputs);
 
             var inputPin = new InputChipPin(State.LOW, pin, this);
             inputPin.setConnectionPoint(new Point(pin.getCenterX(), pin.getCenterY()));
@@ -207,17 +204,9 @@ public class Chip {
         }
     }
 
-    private double getCenterYForPinCircle(int index) {
-        return ChipConstants.chipPinMargin + ChipConstants.chipPinRadius * (2 * index + 1) + ChipConstants.chipPinGap * index;
-    }
-
     private void addOutputPins() {
         for (int i = 0; i < outputs.size(); i++) {
-            Circle pin = new Circle(ChipConstants.chipPinRadius);
-            pin.setCenterX(chip.getPrefWidth() - ChipConstants.chipPinRadius);
-            pin.setCenterY(getCenterYForPinCircle(i));
-            pin.setFill(Colors.terminalGreyColor);
-            addToolTipToPin(outputs, i, pin);
+            Circle pin = getCircle(chip.getPrefWidth() - ChipConstants.chipPinRadius, i, outputs);
 
             var outputPin = new OutputChipPin(State.LOW, pin, this);
             outputPin.setConnectionPoint(new Point(pin.getCenterX(), pin.getCenterY()));
@@ -225,6 +214,24 @@ public class Chip {
 
             chip.getChildren().add(pin);
         }
+    }
+
+    @NotNull
+    private Circle getCircle(double chipPinRadius, int i, List<String> inputs) {
+        Circle pin = new Circle(ChipConstants.chipPinRadius);
+        pin.setCenterX(chipPinRadius);
+        pin.setCenterY(getCenterYForPinCircle(i));
+        pin.setFill(Colors.terminalGreyColor);
+        addToolTipToPin(inputs, i, pin);
+
+        pin.setOnMouseEntered(e -> pin.setCursor(Cursor.HAND));
+        pin.setOnMouseExited(e -> pin.setCursor(Cursor.DEFAULT));
+
+        return pin;
+    }
+
+    private double getCenterYForPinCircle(int index) {
+        return ChipConstants.chipPinMargin + ChipConstants.chipPinRadius * (2 * index + 1) + ChipConstants.chipPinGap * index;
     }
 
     private Point calculateConnectionPoint(Circle pin) {
@@ -278,6 +285,14 @@ public class Chip {
         }
 
         return new ArrayList<>(inputsSet);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String[] getFunctions() {
+        return functions;
     }
 
     public void draw(Canvas canvas) {
