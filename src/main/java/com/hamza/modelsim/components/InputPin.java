@@ -13,10 +13,11 @@ public class InputPin extends Pin {
     private static int terminalsCount = 0;
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
     private String name;
+    private final Text labelForName;
 
     public InputPin(double y) {
         super(y);
-        name = TerminalConstants.name + " " + terminalsCount++;
+        name = TerminalConstants.name + terminalsCount++;
 
         getPane().setLayoutX(TerminalConstants.leftX);
         state.set(State.LOW);
@@ -47,16 +48,13 @@ public class InputPin extends Pin {
         getConnector().setRadius(TerminalConstants.connectorRadius);
         getConnector().setFill(Colors.terminalGreyColor);
 
-        Text labelForName = new Text(name);
+        labelForName = new Text(name);
         labelForName.setFill(Colors.white);
         labelForName.setLayoutX(110);
         labelForName.setLayoutY(35);
 
         // behaviour
         setTerminalToggler();
-
-        // TODO: display popup which consists a delete button and input field for name.
-        getBase().setOnMouseClicked(e -> System.out.println("Clicked"));
 
         getPane().getChildren().add(getBase());
         getPane().getChildren().add(getExtender());
@@ -72,7 +70,6 @@ public class InputPin extends Pin {
             else setState(State.HIGH);
         });
     }
-
 
     public void draw(Pane canvas) {
         canvas.getChildren().add(getPane());
@@ -93,5 +90,6 @@ public class InputPin extends Pin {
 
     public void setName(String name) {
         this.name = name;
+        labelForName.setText(name);
     }
 }

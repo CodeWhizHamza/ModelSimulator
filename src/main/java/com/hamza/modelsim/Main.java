@@ -2,18 +2,15 @@ package com.hamza.modelsim;
 
 import com.hamza.modelsim.abstractcomponents.*;
 import com.hamza.modelsim.components.*;
+import com.hamza.modelsim.components.MenuBar;
 import com.hamza.modelsim.constants.*;
 import javafx.application.Application;
-import javafx.beans.property.Property;
 import javafx.collections.*;
+import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventTarget;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
+import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -22,6 +19,8 @@ import javafx.stage.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class Main extends Application {
@@ -122,9 +121,7 @@ public class Main extends Application {
                 ContextMenu contextMenu = new ContextMenu();
                 MenuItem deleteMenuItem = new MenuItem("Delete");
                 contextMenu.getItems().add(deleteMenuItem);
-                wire.getLine().setOnContextMenuRequested(event -> {
-                    contextMenu.show(wire.getLine(), event.getScreenX(), event.getScreenY());
-                });
+                wire.getLine().setOnContextMenuRequested(event -> contextMenu.show(wire.getLine(), event.getScreenX(), event.getScreenY()));
                 deleteMenuItem.setOnAction(event -> {
                     wire.removeListeners();
                     wires.remove(wire);
@@ -174,12 +171,12 @@ public class Main extends Application {
         canvas.add(inputPinsBase);
         canvas.add(outputPinsBase);
 
-        inputPinsBase.setOnMouseClicked(addNewInputTerminal(canvas));
+        inputPinsBase.setOnMouseClicked(addNewInputTerminal());
         for (var pin : inputPins)
             pin.draw(canvas.getDrawable());
 
         // OUTPUT terminals
-        outputPinsBase.setOnMouseClicked(addNewOutputTerminal(canvas));
+        outputPinsBase.setOnMouseClicked(addNewOutputTerminal());
         for (var pin : outputPins)
             pin.draw(canvas.getDrawable());
 
@@ -193,13 +190,26 @@ public class Main extends Application {
                 ContextMenu contextMenu = new ContextMenu();
                 MenuItem deleteMenuItem = new MenuItem("Delete");
                 contextMenu.getItems().add(deleteMenuItem);
-                chip.getPane().setOnContextMenuRequested(event -> {
-                    contextMenu.show(chip.getPane(), event.getScreenX(), event.getScreenY());
-                });
-                deleteMenuItem.setOnAction(event -> {
-                    deleteChip(chip);
-                });
+                chip.getPane().setOnContextMenuRequested(event -> contextMenu.show(chip.getPane(), event.getScreenX(), event.getScreenY()));
+                deleteMenuItem.setOnAction(event -> deleteChip(chip));
             });
+        });
+
+        inputPins.addListener((ListChangeListener<? super InputPin>) change -> {
+            for (var pin : inputPins)
+                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            for (var pin : inputPins)
+                pin.draw(canvas.getDrawable());
+
+            inputPins.forEach(this::showContextMenuOnPinClick);
+        });
+        outputPins.addListener((ListChangeListener<? super OutputPin>) change -> {
+            for (var pin : outputPins)
+                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            for (var pin : outputPins)
+                pin.draw(canvas.getDrawable());
+
+            outputPins.forEach(this::showContextMenuOnPinClick);
         });
 
         scene.setFill(Colors.backgroundColor);
@@ -207,22 +217,111 @@ public class Main extends Application {
         mainStage.show();
     }
 
+    private void showContextMenuOnPinClick(InputPin pin) {
+        Node node = pin.getPane();
+
+        ContextMenu contextMenu = new ContextMenu();
+        TextField textField = makeTextField(pin, contextMenu);
+
+        MenuItem deleteMenuItem = new MenuItem("Delete");
+        deleteMenuItem.setOnAction(event -> {
+            removeAllConnectedWiresToPin(pin);
+
+            // To remove it from view
+            canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            inputPins.remove(pin);
+        });
+        contextMenu.getItems().addAll( new CustomMenuItem(textField), new SeparatorMenuItem(),deleteMenuItem);
+        node.setOnContextMenuRequested(event -> {
+            textField.setText(pin.getName());
+            contextMenu.show(node, event.getScreenX(), event.getScreenY());
+        });
+    }
+
+    @NotNull
+    private TextField makeTextField(Object pin, ContextMenu contextMenu) {
+        TextField textField = new TextField();
+        textField.requestFocus();
+
+        textField.setOnKeyReleased(e -> {
+            if (e.getCode() == KeyCode.SPACE) {
+                textField.setText(textField.getText().replaceAll("\\s", ""));
+                textField.positionCaret(textField.getLength());
+            }
+        });
+        // consume the event to prevent it from closing the context menu
+        textField.addEventFilter(MouseEvent.MOUSE_CLICKED, Event::consume);
+
+        textField.setOnAction(e -> {
+            if (pin instanceof InputPin)
+                ((InputPin) pin).setName(textField.getText());
+            else
+                ((OutputPin) pin).setName(textField.getText());
+            contextMenu.hide();
+        });
+        return textField;
+    }
+
+    private void showContextMenuOnPinClick(OutputPin pin) {
+        Node node = pin.getPane();
+
+        ContextMenu contextMenu = new ContextMenu();
+        TextField textField = makeTextField(pin, contextMenu);
+
+        MenuItem deleteMenuItem = new MenuItem("Delete");
+        contextMenu.getItems().addAll( new CustomMenuItem(textField), new SeparatorMenuItem(),deleteMenuItem);
+        node.setOnContextMenuRequested(event -> {
+            textField.setText(pin.getName());
+            contextMenu.show(node, event.getScreenX(), event.getScreenY());
+        });
+        deleteMenuItem.setOnAction(event -> {
+            removeAllConnectedWiresToPin(pin);
+
+            // To remove it from view
+            canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            outputPins.remove(pin);
+        });
+    }
+
+    private void removeAllConnectedWiresToPin(InputPin pin) {
+        List<Wire> toBeRemoved = new ArrayList<>();
+        for(Wire wire : wires) {
+            if (wire.getInputPin() == pin)
+                toBeRemoved.add(wire);
+        }
+        deleteWires(toBeRemoved);
+    }
+
+    private void removeAllConnectedWiresToPin(OutputPin pin) {
+        List<Wire> toBeRemoved = new ArrayList<>();
+        for(Wire wire : wires) {
+            if (wire.getOutputPin() == pin)
+                toBeRemoved.add(wire);
+        }
+        deleteWires(toBeRemoved);
+    }
+
+    private void deleteWires(List<Wire> toBeRemoved) {
+        for(var wire : toBeRemoved)
+            wire.removeListeners();
+        wires.removeAll(toBeRemoved);
+    }
     private void deleteChip(Chip chip) {
         chips.remove(chip);
         chip.removeAllListeners();
 
+        List<Wire> wiresToBeRemoved = new ArrayList<>();
         for(Wire wire : wires) {
             InputChipPin input = wire.getOutputToChip();
             OutputChipPin output = wire.getInputFromChip();
             if (chip.getInputPins().stream().anyMatch(pin -> pin == input)) {
-                wires.remove(wire);
-                wire.removeListeners();
+                wiresToBeRemoved.add(wire);
             }
             if (chip.getOutputPins().stream().anyMatch(pin -> pin == output)) {
-                wires.remove(wire);
-                wire.removeListeners();
+                wiresToBeRemoved.add(wire);
             }
         }
+        deleteWires(wiresToBeRemoved);
     }
 
     private void handleOutputChipPinClicked(OutputChipPin pin, MouseEvent e) {
@@ -296,29 +395,13 @@ public class Main extends Application {
     }
 
     @NotNull
-    private EventHandler<MouseEvent> addNewOutputTerminal(Canvas canvas) {
-        return e -> {
-            outputPins.add(new OutputPin(e.getSceneY() - TerminalConstants.height / 2));
-
-            for (var pin : outputPins) {
-                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
-            }
-            for (var pin : outputPins)
-                pin.draw(canvas.getDrawable());
-        };
+    private EventHandler<MouseEvent> addNewOutputTerminal() {
+        return e -> outputPins.add(new OutputPin(e.getSceneY() - TerminalConstants.height / 2));
     }
 
     @NotNull
-    private EventHandler<MouseEvent> addNewInputTerminal(Canvas canvas) {
-        return e -> {
-            inputPins.add(new InputPin(e.getSceneY() - TerminalConstants.height / 2));
-
-            for (var pin : inputPins) {
-                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
-            }
-            for (var pin : inputPins)
-                pin.draw(canvas.getDrawable());
-        };
+    private EventHandler<MouseEvent> addNewInputTerminal() {
+        return e -> inputPins.add(new InputPin(e.getSceneY() - TerminalConstants.height / 2));
     }
 
     public Rectangle makeRectangle(double x, double y, double width, double height, Color color) {

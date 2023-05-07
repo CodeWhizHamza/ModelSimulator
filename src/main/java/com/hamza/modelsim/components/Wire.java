@@ -194,6 +194,12 @@ public class Wire {
         else
             outputToChip.setState(state.get());
     }
+    private void resetState() {
+        if (outputPin != null)
+            outputPin.setState(State.LOW);
+        else
+            outputToChip.setState(State.LOW);
+    }
 
     public void setMousePosition(Point p) {
         Point lastPoint;
@@ -238,6 +244,8 @@ public class Wire {
     }
 
     public void removeListeners() {
+        resetState();
+
         if (source instanceof ChipPin) {
             ((ChipPin) source).getParent().getPane().layoutXProperty().removeListener(updateLineListener);
             ((ChipPin) source).getParent().getPane().layoutYProperty().removeListener(updateLineListener);
@@ -255,6 +263,14 @@ public class Wire {
             inputPin.getState().removeListener(stateChangeAndPropagateListener);
         else
             inputFromChip.getState().removeListener(stateChangeAndPropagateListener);
+    }
+
+    public InputPin getInputPin() {
+        return inputPin;
+    }
+
+    public OutputPin getOutputPin() {
+        return outputPin;
     }
 
     public OutputChipPin getInputFromChip() {

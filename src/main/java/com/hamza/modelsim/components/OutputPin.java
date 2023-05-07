@@ -14,7 +14,7 @@ public class OutputPin extends Pin {
 
     public OutputPin(double y) {
         super(y);
-        name = TerminalConstants.name + " " + terminalsCount++;
+        name = TerminalConstants.name + terminalsCount++;
 
         getPane().setLayoutX(TerminalConstants.rightX);
         getPane().setPrefWidth(100);
@@ -46,9 +46,6 @@ public class OutputPin extends Pin {
         getConnector().setRadius(TerminalConstants.connectorRadius);
         getConnector().setFill(Colors.terminalGreyColor);
 
-        // TODO: display popup which consists a delete button and input field for name.
-        getBase().setOnMouseClicked(e -> System.out.println("Clicked"));
-
         getPane().getChildren().add(getBase());
         getPane().getChildren().add(getExtender());
         getPane().getChildren().add(getButton());
@@ -67,10 +64,6 @@ public class OutputPin extends Pin {
 
     public void draw(Pane canvas) {
         canvas.getChildren().add(getPane());
-    }
-
-    public SimpleObjectProperty<State> getState() {
-        return state;
     }
 
     public void setState(State value) {
