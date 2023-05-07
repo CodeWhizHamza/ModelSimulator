@@ -118,18 +118,18 @@ public class Main extends Application {
             canvas.getDrawable().getChildren().removeIf(node -> node instanceof Polyline);
             wires.forEach(wire -> wire.draw(canvas));
 
-            for (Wire wire : wires) {
+            wires.forEach(wire -> {
                 ContextMenu contextMenu = new ContextMenu();
                 MenuItem deleteMenuItem = new MenuItem("Delete");
-                deleteMenuItem.setOnAction(event -> {
-                    wire.removeListeners();
-                    wires.remove(wire);
-                });
                 contextMenu.getItems().add(deleteMenuItem);
                 wire.getLine().setOnContextMenuRequested(event -> {
                     contextMenu.show(wire.getLine(), event.getScreenX(), event.getScreenY());
                 });
-            }
+                deleteMenuItem.setOnAction(event -> {
+                    wire.removeListeners();
+                    wires.remove(wire);
+                });
+            });
         });
 
         root.getChildren().add(canvas.getDrawable());
@@ -187,13 +187,42 @@ public class Main extends Application {
         chips.addListener((ListChangeListener<? super Chip>) change -> {
             ObservableList<Node> children = canvas.getDrawable().getChildren();
             children.removeIf(child -> child instanceof AnchorPane);
-
             chips.forEach(chip -> chip.draw(canvas));
+
+            chips.forEach(chip -> {
+                ContextMenu contextMenu = new ContextMenu();
+                MenuItem deleteMenuItem = new MenuItem("Delete");
+                contextMenu.getItems().add(deleteMenuItem);
+                chip.getPane().setOnContextMenuRequested(event -> {
+                    contextMenu.show(chip.getPane(), event.getScreenX(), event.getScreenY());
+                });
+                deleteMenuItem.setOnAction(event -> {
+                    deleteChip(chip);
+                });
+            });
         });
 
         scene.setFill(Colors.backgroundColor);
         mainStage.setScene(scene);
         mainStage.show();
+    }
+
+    private void deleteChip(Chip chip) {
+        chips.remove(chip);
+        chip.removeAllListeners();
+
+        for(Wire wire : wires) {
+            InputChipPin input = wire.getOutputToChip();
+            OutputChipPin output = wire.getInputFromChip();
+            if (chip.getInputPins().stream().anyMatch(pin -> pin == input)) {
+                wires.remove(wire);
+                wire.removeListeners();
+            }
+            if (chip.getOutputPins().stream().anyMatch(pin -> pin == output)) {
+                wires.remove(wire);
+                wire.removeListeners();
+            }
+        }
     }
 
     private void handleOutputChipPinClicked(OutputChipPin pin, MouseEvent e) {

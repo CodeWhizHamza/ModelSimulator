@@ -6,7 +6,6 @@ import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.Size;
 import com.hamza.modelsim.constants.State;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -17,7 +16,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Polyline;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
-import org.jetbrains.annotations.NotNull;
 
 public class Wire {
     private final ObservableList<Point> points;
@@ -25,12 +23,27 @@ public class Wire {
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<Point> mousePosition;
     private final Object source;
+    private final ChangeListener<State> stateChangeListener = new ChangeListener<>() {
+        @Override
+        public void changed(ObservableValue<? extends State> observableValue, State state, State t1) {
+            if (observableValue.getValue() == State.HIGH)
+                line.setStroke(Colors.activeWireColor);
+            else
+                line.setStroke(Color.WHITE);
+        }
+    };
     private Object destination;
-
+    private final ChangeListener<Number> updateLineListener = (observableValue, number, t1) -> updateLine();
+    private final ListChangeListener<? super Point> pointListChangeListener = (ListChangeListener<Point>) change -> updateLine();
+    private final InvalidationListener mousePositionListener = observable -> updateLine();
     private InputPin inputPin;
     private OutputPin outputPin;
     private OutputChipPin inputFromChip;
     private InputChipPin outputToChip;
+    private final ChangeListener<State> stateChangeAndPropagateListener = (observableValue, number, t1) -> {
+        state.set(t1);
+        propagateStateToOutput();
+    };
 
     public Wire(Object source) {
         this.source = source;
@@ -64,11 +77,10 @@ public class Wire {
     private void handleSourceMovement() {
         updateLineForChangesIn(source);
     }
+
     private void handleDestinationPinMovement() {
         updateLineForChangesIn(destination);
     }
-
-    private final ChangeListener<Number> updateLineListener = (observableValue, number, t1) -> updateLine();
 
     private void updateLineForChangesIn(Object source) {
         if (source instanceof ChipPin) {
@@ -76,8 +88,8 @@ public class Wire {
             ((ChipPin) source).getParent().getPane().layoutYProperty().addListener(updateLineListener);
         } else {
             ((Pin) source).getPane()
-                .layoutYProperty()
-                .addListener(updateLineListener);
+                    .layoutYProperty()
+                    .addListener(updateLineListener);
         }
     }
 
@@ -108,25 +120,14 @@ public class Wire {
         }
     }
 
-    private final ChangeListener<State> stateChangeListener = new ChangeListener<>() {
-        @Override
-        public void changed(ObservableValue<? extends State> observableValue, State state, State t1) {
-            if (observableValue.getValue() == State.HIGH)
-                line.setStroke(Colors.activeWireColor);
-            else
-                line.setStroke(Color.WHITE);
-        }
-    };
     private void handleStateChange() {
         state.addListener(stateChangeListener);
     }
 
-    private final ListChangeListener<? super Point> pointListChangeListener = (ListChangeListener<Point>) change -> updateLine();
     private void handlePointsChange() {
         points.addListener(pointListChangeListener);
     }
 
-    private final InvalidationListener mousePositionListener = observable -> updateLine();
     private void handleMouseMovement() {
         mousePosition.addListener(mousePositionListener);
     }
@@ -149,6 +150,7 @@ public class Wire {
         updateState();
         propagateStateToOutput();
     }
+
     private void updateState() {
         if (inputFromChip != null)
             state.set(inputFromChip.getState().get());
@@ -156,6 +158,7 @@ public class Wire {
             state.set(inputPin.getState().get());
 
     }
+
     private void setInputAndOutputPins() {
         if (source instanceof InputPin) {
             inputPin = (InputPin) source;
@@ -178,12 +181,8 @@ public class Wire {
 
     }
 
-    private final ChangeListener<State> stateChangeAndPropagateListener = (observableValue, number, t1) -> {
-        state.set(t1);
-        propagateStateToOutput();
-    };
     private void listenForStateChanges() {
-        if(inputPin != null)
+        if (inputPin != null)
             inputPin.getState().addListener(stateChangeAndPropagateListener);
         else
             inputFromChip.getState().addListener(stateChangeAndPropagateListener);
@@ -198,13 +197,12 @@ public class Wire {
 
     public void setMousePosition(Point p) {
         Point lastPoint;
-        if (points.size() == 0){
-                if (source instanceof Pin)
-                    lastPoint = ((Pin) source).getConnectionPoint();
-                else
-                   lastPoint = ((ChipPin) source).getConnectionPoint();
-            }
-        else
+        if (points.size() == 0) {
+            if (source instanceof Pin)
+                lastPoint = ((Pin) source).getConnectionPoint();
+            else
+                lastPoint = ((ChipPin) source).getConnectionPoint();
+        } else
             lastPoint = points.get(points.size() - 1);
 
         double angle = getAngle(p, lastPoint);
@@ -213,6 +211,7 @@ public class Wire {
         p = new Point(lastPoint.getX() + hypo * Math.cos(angle), lastPoint.getY() - hypo * Math.sin(angle));
         mousePosition.set(p);
     }
+
     private double getAngle(Point p1, Point p2) {
         double angle = Math.atan2(Math.abs(p2.getY() - p1.getY()), Math.abs(p2.getX() - p1.getX()));
 
@@ -227,11 +226,13 @@ public class Wire {
         }
         return angle;
     }
+
     private double getHypo(Point p1, Point p2) {
         double perp = Math.abs(p2.getY() - p1.getY());
         double base = Math.abs(p2.getX() - p1.getX());
         return Math.sqrt(perp * perp + base * base) - Size.MOUSE_MARGIN;
     }
+
     public Object getSourcePin() {
         return source;
     }
@@ -250,15 +251,24 @@ public class Wire {
         points.removeListener(pointListChangeListener);
         mousePosition.removeListener(mousePositionListener);
 
-        if(inputPin != null)
+        if (inputPin != null)
             inputPin.getState().removeListener(stateChangeAndPropagateListener);
         else
             inputFromChip.getState().removeListener(stateChangeAndPropagateListener);
     }
 
+    public OutputChipPin getInputFromChip() {
+        return inputFromChip;
+    }
+
+    public InputChipPin getOutputToChip() {
+        return outputToChip;
+    }
+
     public void addPoint(Point p) {
         points.add(p);
     }
+
     public Polyline getLine() {
         return line;
     }

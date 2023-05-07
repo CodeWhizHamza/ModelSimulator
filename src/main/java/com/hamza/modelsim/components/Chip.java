@@ -5,6 +5,7 @@ import com.hamza.modelsim.constants.ChipConstants;
 import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.State;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -37,7 +38,11 @@ public class Chip {
 
     private final ObservableList<State> inputValues;
     private final ObservableList<State> outputValues;
-
+    private final ListChangeListener<? super State> outputValuesListener = change -> updateOutputPins();
+    private final ChangeListener<State> inputChangesListener = (observableValue, state, t1) -> {
+        initializeInputValues();
+        updateOutputs();
+    };
     private double xOffset;
     private double yOffset;
 
@@ -103,7 +108,7 @@ public class Chip {
     }
 
     private void listenToChangesInOutputs() {
-        outputValues.addListener((ListChangeListener<? super State>) change -> updateOutputPins());
+        outputValues.addListener(outputValuesListener);
     }
 
     private void updateOutputPins() {
@@ -117,10 +122,7 @@ public class Chip {
     }
 
     private void observeChangesInInputs() {
-        inputPins.forEach(pin -> pin.getState().addListener((observableValue, state, t1) -> {
-            initializeInputValues();
-            updateOutputs();
-        }));
+        inputPins.forEach(pin -> pin.getState().addListener(inputChangesListener));
     }
 
     private void updateOutputs() {
@@ -285,6 +287,11 @@ public class Chip {
         }
 
         return new ArrayList<>(inputsSet);
+    }
+
+    public void removeAllListeners() {
+        outputValues.removeListener(outputValuesListener);
+        inputPins.forEach(pin -> pin.getState().removeListener(inputChangesListener));
     }
 
     public String getName() {
