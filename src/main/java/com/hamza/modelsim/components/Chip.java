@@ -10,10 +10,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Cursor;
+import javafx.scene.Group;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Background;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Polygon;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import org.jetbrains.annotations.NotNull;
@@ -28,16 +30,18 @@ import java.util.Set;
 public class Chip {
     private final AnchorPane chip;
     private final String name;
-    private final String[] functions;
+    private String[] functions;
     private final SimpleObjectProperty<Point> position;
     private final List<InputChipPin> inputPins;
-    private final List<OutputChipPin> outputPins;
+    private List<OutputChipPin> outputPins;
 
     private final List<String> inputs;
-    private final List<String> outputs;
+    private List<String> outputs;
 
     private final ObservableList<State> inputValues;
-    private final ObservableList<State> outputValues;
+    private ObservableList<State> outputValues;
+    private ObservableList<Polygon> segments;
+
     private final ListChangeListener<? super State> outputValuesListener = change -> updateOutputPins();
     private final ChangeListener<State> inputChangesListener = (observableValue, state, t1) -> {
         initializeInputValues();
@@ -102,6 +106,144 @@ public class Chip {
         updateOutputPins();
     }
 
+    public Chip(String name, Point position) {
+        this.name = name;
+        this.position = new SimpleObjectProperty<>();
+        this.position.set(position);
+        inputPins = new ArrayList<>();
+        this.inputs = new ArrayList<>(List.of(new String[]{"sign", "a", "b", "c", "d", "e", "f", "g"}));
+
+        inputValues = FXCollections.observableArrayList();
+        segments = FXCollections.observableArrayList();
+
+        chip = new AnchorPane();
+        chip.setLayoutX(this.position.get().getX());
+        chip.setLayoutY(this.position.get().getY());
+        chip.setPrefWidth(ChipConstants.chipWidth);
+        chip.setBackground(Background.fill(Colors.chipColor));
+
+        this.position.addListener(change -> {
+            chip.setLayoutX(this.position.get().getX());
+            chip.setLayoutY(this.position.get().getY());
+        });
+
+        double height = inputs.size() * (2 * ChipConstants.chipPinRadius + ChipConstants.chipPinGap) + 2 * ChipConstants.chipPinMargin - ChipConstants.chipPinGap;
+        chip.setPrefHeight(height);
+
+        addInputPins();
+        addSegments();
+
+        // Behaviours
+        makeChipDraggable();
+        initializeInputValues();
+        observeChangesInInputs();
+        updateConnectionPoints();
+
+        inputValues.addListener((ListChangeListener<? super State>) change -> {
+            for(int i = 0; i < inputValues.size(); i++) {
+                segments.get(i).setFill(
+                        inputValues.get(i) == State.HIGH
+                                ? Colors.terminalActiveColor
+                                : Colors.terminalGreyColor
+                );
+            }
+        });
+    }
+
+    public void addSegments() {
+        Group segmentsHolder = new Group();
+
+        Polygon sign = getHSegment();
+        Polygon a = getHSegment();
+        Polygon b = getVSegment();
+        Polygon c = getVSegment();
+        Polygon d = getHSegment();
+        Polygon e = getVSegment();
+        Polygon f = getVSegment();
+        Polygon g = getHSegment();
+
+        double height = 78;
+        double width = 74;
+
+        sign.setLayoutX(0);
+        sign.setLayoutY(height / 2 - 2);
+
+        a.setLayoutX(width / 2 + 2);
+        a.setLayoutY(0);
+
+        b.setLayoutX(width - 6);
+        b.setLayoutY(6);
+
+        c.setLayoutX(width - 6);
+        c.setLayoutY(4 + height / 2);
+
+        d.setLayoutX(width / 2 + 2);
+        d.setLayoutY(height - 6);
+
+        e.setLayoutX(width / 2 - 4);
+        e.setLayoutY(4 + height / 2);
+
+        f.setLayoutX(width / 2 - 4);
+        f.setLayoutY(6);
+
+        g.setLayoutX(width / 2 + 2);
+        g.setLayoutY(height / 2 - 2);
+
+        segmentsHolder.getChildren().add(sign);
+        segmentsHolder.getChildren().add(a);
+        segmentsHolder.getChildren().add(b);
+        segmentsHolder.getChildren().add(c);
+        segmentsHolder.getChildren().add(d);
+        segmentsHolder.getChildren().add(e);
+        segmentsHolder.getChildren().add(f);
+        segmentsHolder.getChildren().add(g);
+
+        segments.addAll(sign, a, b, c, d, e, f, g);
+
+        double holderHeight = segmentsHolder.getBoundsInLocal().getHeight();
+        double holderWidth = segmentsHolder.getBoundsInLocal().getWidth();
+
+        segmentsHolder.setLayoutX(chip.getPrefWidth() / 2 - holderWidth / 2);
+        segmentsHolder.setLayoutY(chip.getPrefHeight() / 2 - holderHeight / 2);
+
+        chip.getChildren().add(segmentsHolder);
+    }
+
+    @NotNull
+    private static Polygon getVSegment() {
+        double width = 8;
+        double height = 32;
+        Polygon hexagon = new Polygon();
+        hexagon.getPoints().addAll(
+                width / 2, 0.0,
+                width,         height / 5,
+                width,         4 * height / 5,
+                width / 2, height,
+                0.0,           4 * height / 5,
+                0.0,           height / 5,
+                width / 2,     0.0
+        );
+        hexagon.setFill(Colors.terminalGreyColor);
+        return hexagon;
+    }
+    @NotNull
+    private static Polygon getHSegment() {
+        double width = 32;
+        double height = 8;
+        Polygon hexagon = new Polygon();
+        hexagon.getPoints().addAll(
+                0.0,       height / 2,
+                width / 5,     0.0,
+                4 * width / 5, 0.0,
+                width,         height / 2,
+                4 * width / 5, height,
+                width / 5,     height,
+                0.0,           height / 2
+        );
+        hexagon.setFill(Colors.terminalGreyColor);
+        return hexagon;
+    }
+
     public static String extractFunctionName(String expression) {
         int equalsIndex = expression.indexOf("=");
         return expression.substring(0, equalsIndex).trim();
@@ -126,6 +268,8 @@ public class Chip {
     }
 
     private void updateOutputs() {
+        if (outputValues == null) return;
+
         outputValues.clear();
         for (var expression : functions) {
             boolean result = solveExpression(expression);
@@ -189,7 +333,8 @@ public class Chip {
 
     private void updateConnectionPoints() {
         List<ChipPin> combined = new ArrayList<>(inputPins);
-        combined.addAll(outputPins);
+        if (outputPins != null)
+            combined.addAll(outputPins);
         combined.forEach(pin -> pin.setConnectionPoint(calculateConnectionPoint(pin.getConnector())));
     }
 
@@ -290,7 +435,8 @@ public class Chip {
     }
 
     public void removeAllListeners() {
-        outputValues.removeListener(outputValuesListener);
+        if (outputValues != null)
+            outputValues.removeListener(outputValuesListener);
         inputPins.forEach(pin -> pin.getState().removeListener(inputChangesListener));
     }
 

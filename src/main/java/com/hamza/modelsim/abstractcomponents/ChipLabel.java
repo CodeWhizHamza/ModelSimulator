@@ -5,7 +5,7 @@ public class ChipLabel {
     private final String[] functions;
 
     public ChipLabel(String name, String function) {
-        this(name, new String[]{function});
+        this(name, function.equals("") ? new String[]{} : new String[]{function});
     }
     public ChipLabel(String name, String[] functions) {
         this.name = name;

@@ -70,6 +70,9 @@ public class Main extends Application {
         outputPins.addListener((ListChangeListener<? super OutputPin>) change -> outputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputPinClicked(pin, e))));
         chips.addListener((ListChangeListener<? super Chip>) change -> chips.forEach(chip -> {
             chip.getInputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleInputChipPinClicked(pin, e)));
+
+            if (chip.getOutputPins() == null) return;
+
             chip.getOutputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputChipPinClicked(pin, e)));
         }));
 
@@ -90,7 +93,11 @@ public class Main extends Application {
                 if (chips.size() > 0 && isChipDrawing) {
                     var chip = chips.get(chips.size() - 1);
                     chips.remove(chips.size() - 1);
-                    chips.add(new Chip(chip.getName(), chip.getFunctions(), new Point(e.getSceneX(), e.getScreenY())));
+                    Point position = new Point(e.getSceneX(), e.getScreenY());
+                    if (chip.getFunctions() != null)
+                        chips.add(new Chip(chip.getName(), chip.getFunctions(), position));
+                    else
+                       chips.add(new Chip(chip.getName(), position));
                     isChipDrawing = false;
                 }
                 if ( wires.size() > 0 && isWireDrawing) {
@@ -142,7 +149,11 @@ public class Main extends Application {
                 Button button = new Button(chip.getName());
                 button.setOnAction(e -> {
                     isChipDrawing = true;
-                    chips.add(new Chip(chip.getName(), chip.getFunctions(), new Point(mousePosition.getX(), mousePosition.getY() + 20)));
+                    Point position = new Point(mousePosition.getX(), mousePosition.getY() + 20);
+                    if (chip.getFunctions().length > 0)
+                        chips.add(new Chip(chip.getName(), chip.getFunctions(), position));
+                    else
+                        chips.add(new Chip(chip.getName(), position));
                 });
                 menuBar.addButton(button);
             });
@@ -152,6 +163,8 @@ public class Main extends Application {
         availableChips.add(new ChipLabel("NOT", "F=!A"));
         availableChips.add(new ChipLabel("AND", "F=A&B"));
         availableChips.add(new ChipLabel("OR", "F=A|B"));
+        availableChips.add(new ChipLabel("7-Seg", ""));
+
 
         double xPosition = 0;
         double yPosition = 8;
@@ -317,7 +330,7 @@ public class Main extends Application {
             if (chip.getInputPins().stream().anyMatch(pin -> pin == input)) {
                 wiresToBeRemoved.add(wire);
             }
-            if (chip.getOutputPins().stream().anyMatch(pin -> pin == output)) {
+            if (chip.getOutputPins() != null && chip.getOutputPins().stream().anyMatch(pin -> pin == output)) {
                 wiresToBeRemoved.add(wire);
             }
         }
