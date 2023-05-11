@@ -34,6 +34,7 @@ public class Main extends Application {
 
     private boolean isWireDrawing;
     private boolean isChipDrawing;
+    private boolean isShiftDown;
 
     private Point mousePosition;
 
@@ -57,6 +58,7 @@ public class Main extends Application {
 
         isWireDrawing = false;
         isChipDrawing = false;
+        isShiftDown = false;
 
         mousePosition = new Point();
 
@@ -75,6 +77,13 @@ public class Main extends Application {
 
             chip.getOutputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputChipPinClicked(pin, e)));
         }));
+
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.SHIFT) isShiftDown = true;
+        });
+        scene.setOnKeyReleased(e -> {
+            if (e.getCode() == KeyCode.SHIFT) isShiftDown = false;
+        });
 
         scene.setOnMouseClicked(e -> {
             if (!(e.getTarget() instanceof Pane)) return;
@@ -101,7 +110,22 @@ public class Main extends Application {
                     isChipDrawing = false;
                 }
                 if ( wires.size() > 0 && isWireDrawing) {
-                    wires.get(wires.size() - 1).addPoint(new Point(e.getSceneX(), e.getSceneY()));
+                    if (!isShiftDown) {
+                        wires.get(wires.size() - 1).addPoint(
+                                new Point(mousePosition.getX(), mousePosition.getY())
+                        );
+                    } else {
+                        Point p = getLastPointPositionOfWire();
+
+                        double absDiffX = Math.abs(mousePosition.getX() - p.getX());
+                        double absDiffY = Math.abs(mousePosition.getY() - p.getY());
+
+                        if (absDiffY > absDiffX) {
+                            wires.get(wires.size() - 1).addPoint(new Point(p.getX(), mousePosition.getY()));
+                        } else {
+                            wires.get(wires.size() - 1).addPoint(new Point(mousePosition.getX(), p.getY()));
+                        }
+                    }
                 }
             }
 
@@ -111,7 +135,24 @@ public class Main extends Application {
             mousePosition.setY(e.getSceneY());
 
             if (wires.size() != 0 && isWireDrawing) {
-                wires.get(wires.size() - 1).setMousePosition(new Point(e.getSceneX(), e.getSceneY()));
+
+                if (!isShiftDown) {
+                    wires.get(wires.size() - 1).setMousePosition(
+                        new Point(mousePosition.getX(), mousePosition.getY())
+                    );
+                } else {
+                    Point p = getLastPointPositionOfWire();
+
+                    double absDiffX = Math.abs(mousePosition.getX() - p.getX());
+                    double absDiffY = Math.abs(mousePosition.getY() - p.getY());
+
+                    if (absDiffY > absDiffX) {
+                        wires.get(wires.size() - 1).setMousePosition(p.getX(), mousePosition.getY());
+                    } else {
+                        wires.get(wires.size() - 1).setMousePosition(mousePosition.getX(), p.getY());
+                    }
+                }
+
             }
             if(chips.size() != 0 && isChipDrawing) {
                 chips.get(chips.size() - 1).setPosition(new Point(mousePosition.getX(), mousePosition.getY()));
@@ -128,21 +169,16 @@ public class Main extends Application {
                 if (e.getButton() != MouseButton.PRIMARY) return;
                 Point position = new Point(mousePosition.getX(), mousePosition.getY());
 
-                if (isWireDrawing) {
-                    if (wire.getOutputPin() != null) {
-
-                    } else if (wire.getInputFromChip() != null) {
-
-                    }
+                if (!isWireDrawing) {
+                    System.out.println("Wire is drawing.");
+//                    if (wire.getInputPin() != null) {
+//                        wires.add(new Wire(wire.getInputPin(), wire, position));
+//                    } else if (wire.getOutputToChip() != null) {
+//                        wires.add(new Wire(wire.getOutputToChip(), wire, position));
+//                    }
+////                    isWireDrawing = true;
                 } else {
-                    if (wire.getInputPin() != null) {
-                        startWireFromMid(wire, position);
-                        wires.add(new Wire(wire.getInputPin(), position));
-                    } else if (wire.getInputFromChip() != null) {
-                        startWireFromMid(wire, position);
-                        wires.add(new Wire(wire.getInputFromChip(), position));
-                    }
-                    isWireDrawing = true;
+                    wires.get(wires.size() - 1).addPoint(position);
                 }
             }));
 
@@ -190,8 +226,7 @@ public class Main extends Application {
         availableChips.add(new ChipLabel("NAND", "F=!(A&B)"));
         availableChips.add(new ChipLabel("NOR", "F=!(A|B)"));
         availableChips.add(new ChipLabel("7-Seg", ""));
-
-
+        
         double xPosition = 0;
         double yPosition = 8;
         double paddingY = yPosition * 2;
@@ -256,22 +291,50 @@ public class Main extends Application {
         mainStage.show();
     }
 
-    private static void startWireFromMid(Wire wire, Point position) {
-        if (wire.getPoints().size() == 0) {
-            wire.addPoint(position);
-        } else {
-            int lastIndex = wire.getPoints().size() - 1;
-            Point first = wire.getPoints().get(0);
-             Point last = wire.getPoints().get(lastIndex);
-            if (first == last) {
-                if (position.getX() <= first.getX()) {
-                    wire.getPoints().add(0, new Point(position.getX(), position.getY()));
-                } else {
-                    wire.getPoints().add(lastIndex + 1, new Point(position.getX(), position.getY()));
-                }
+    private Point getLastPointPositionOfWire() {
+        Wire last = wires.get(wires.size() - 1);
+        double x = 0, y = 0;
+
+        if (last.getPoints().size() == 0) {
+
+            if (last.getSourcePin() instanceof InputPin) {
+                x = ((InputPin) last.getSourcePin()).getConnectionPoint().getX();
+                y = ((InputPin) last.getSourcePin()).getConnectionPoint().getY();
+            } else if (last.getSourcePin() instanceof OutputPin) {
+                x = ((OutputPin) last.getSourcePin()).getConnectionPoint().getX();
+                y = ((OutputPin) last.getSourcePin()).getConnectionPoint().getY();
+            } else if (last.getSourcePin() instanceof InputChipPin) {
+                x = ((InputChipPin) last.getSourcePin()).getConnectionPoint().getX();
+                y = ((InputChipPin) last.getSourcePin()).getConnectionPoint().getY();
+            } else if (last.getSourcePin() instanceof OutputChipPin) {
+                x = ((OutputChipPin) last.getSourcePin()).getConnectionPoint().getX();
+                y = ((OutputChipPin) last.getSourcePin()).getConnectionPoint().getY();
             }
+
+        } else {
+            x = last.getPoints().get(last.getPoints().size() - 1).getX();
+            y = last.getPoints().get(last.getPoints().size() - 1).getY();
         }
+
+        return new Point(x, y);
     }
+
+//    private static void startWireFromMid(Wire wire, Point position) {
+//        if (wire.getPoints().size() == 0) {
+//            wire.addPoint(position);
+//        } else {
+//            int lastIndex = wire.getPoints().size() - 1;
+//            Point first = wire.getPoints().get(0);
+//            Point last = wire.getPoints().get(lastIndex);
+//            if (first == last) {
+//                if (position.getX() <= first.getX()) {
+//                    wire.getPoints().add(0, new Point(position.getX(), position.getY()));
+//                } else {
+//                    wire.getPoints().add(lastIndex + 1, new Point(position.getX(), position.getY()));
+//                }
+//            }
+//        }
+//    }
 
     private void showContextMenuOnPinClick(InputPin pin) {
         Node node = pin.getPane();
