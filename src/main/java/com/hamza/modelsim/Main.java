@@ -170,13 +170,12 @@ public class Main extends Application {
                 Point position = new Point(mousePosition.getX(), mousePosition.getY());
 
                 if (!isWireDrawing) {
-                    System.out.println("Wire is drawing.");
-//                    if (wire.getInputPin() != null) {
-//                        wires.add(new Wire(wire.getInputPin(), wire, position));
-//                    } else if (wire.getOutputToChip() != null) {
-//                        wires.add(new Wire(wire.getOutputToChip(), wire, position));
-//                    }
-////                    isWireDrawing = true;
+                    if (wire.getInputPin() != null) {
+                        wires.add(new Wire(wire.getInputPin(), wire, position));
+                    } else if (wire.getOutputToChip() != null) {
+                        wires.add(new Wire(wire.getOutputToChip(), wire, position));
+                    }
+                    isWireDrawing = true;
                 } else {
                     wires.get(wires.size() - 1).addPoint(position);
                 }
@@ -318,23 +317,6 @@ public class Main extends Application {
 
         return new Point(x, y);
     }
-
-//    private static void startWireFromMid(Wire wire, Point position) {
-//        if (wire.getPoints().size() == 0) {
-//            wire.addPoint(position);
-//        } else {
-//            int lastIndex = wire.getPoints().size() - 1;
-//            Point first = wire.getPoints().get(0);
-//            Point last = wire.getPoints().get(lastIndex);
-//            if (first == last) {
-//                if (position.getX() <= first.getX()) {
-//                    wire.getPoints().add(0, new Point(position.getX(), position.getY()));
-//                } else {
-//                    wire.getPoints().add(lastIndex + 1, new Point(position.getX(), position.getY()));
-//                }
-//            }
-//        }
-//    }
 
     private void showContextMenuOnPinClick(InputPin pin) {
         Node node = pin.getPane();

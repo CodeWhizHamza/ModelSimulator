@@ -17,9 +17,6 @@ import javafx.scene.shape.Polyline;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-
 public class Wire {
     private final ObservableList<Point> points;
     private final Polyline line;
@@ -98,7 +95,7 @@ public class Wire {
         line.setStrokeWidth(Size.WIRE_STROKE_SIZE);
         line.setStroke(Color.WHITE);
 
-//        addPointsFromPreviousWire(clickedWire, position);
+        addPointsFromPreviousWire(clickedWire, position);
 
         handleSourceMovement();
         handleStateChange();
@@ -106,39 +103,47 @@ public class Wire {
         handleMouseMovement();
     }
 
-//    private void addPointsFromPreviousWire(Wire clickedWire, Point position) {
-//        System.out.println("Reached to add previous points.");
-//        HashMap<Point, Double> pointsWithDistance = new HashMap<>();
-//
-//        Point wireStart;
-//        if(clickedWire.getSourcePin() instanceof Pin)
-//            wireStart = ((Pin) clickedWire.getSourcePin()).getConnectionPoint();
-//        else
-//            wireStart = ((ChipPin) clickedWire.getSourcePin()).getConnectionPoint();
-//
-//        for(int i = 0; i < clickedWire.getPoints().size(); i++) {
-//            pointsWithDistance.put(clickedWire.getPoints().get(i), getDistanceFrom(wireStart, clickedWire.getPoints(), i));
-//        }
-//
-//        System.out.println(pointsWithDistance.isEmpty());
-//        System.out.println(pointsWithDistance.keySet());
-//        System.out.println(pointsWithDistance.values());
-//
-//
-//    }
+    private void addPointsFromPreviousWire(Wire clickedWire, Point position) {
+        Point wireStart = null, wireEnd = null;
+        if (clickedWire.getInputPin() != null)
+            wireStart = clickedWire.getInputPin().getConnectionPoint();
+        else if (clickedWire.getInputFromChip() != null)
+            wireStart = clickedWire.getInputFromChip().getConnectionPoint();
 
-//    private double getDistanceFrom(Point start, ObservableList<Point> points, int index) {
-//        double totalDistance = 0;
-//        points.add(0, start);
-//
-//        for(int i = 1; i <= index; i++) {
-//            totalDistance += distance(points.get(i), points.get(i - 1));
-//        }
-//
-//        return totalDistance;
-//    }
-    private double distance(Point p1, Point p2) {
-        return Math.sqrt(Math.pow(p1.getX() - p2.getX(), 2) + Math.pow(p1.getY() - p2.getY(), 2));
+        if (clickedWire.getOutputPin() != null)
+            wireEnd = clickedWire.getOutputPin().getConnectionPoint();
+        else if (clickedWire.getOutputToChip() != null)
+            wireEnd = clickedWire.getOutputToChip().getConnectionPoint();
+
+        ObservableList<Point> points = FXCollections.observableArrayList();
+        for(var point : clickedWire.getPoints())
+            points.add(new Point(point.getX(), point.getY()));
+
+        points.add(0, wireStart);
+        points.add(wireEnd);
+
+        for(int i = 0; i < points.size() - 1; i++) {
+            double slope = getSlope(points.get(i + 1), points.get(i));
+            double distanceBetweenLineAndPoint = Math.abs(getDistanceBetweenPointAndLine(points.get(i), position, -slope));
+
+            if (distanceBetweenLineAndPoint <= Size.WIRE_STROKE_SIZE) {
+                if (i != 0)
+                    addPoint(points.get(i));
+                addPoint(position);
+                break;
+            } else {
+                if (i == 0) continue;
+                addPoint(points.get(i));
+            }
+        }
+    }
+
+    private double getDistanceBetweenPointAndLine(Point pointForLine, Point testPoint, double slope) {
+        return testPoint.getY() - pointForLine.getY() - slope * (testPoint.getX() - pointForLine.getX());
+    }
+    private double getSlope(Point point1, Point point2) {
+        // the lower the point, the higher value of Y
+        return (point1.getY() - point2.getY()) / (point2.getX() - point1.getX());
     }
 
     private void handleSourceMovement() {
@@ -284,10 +289,6 @@ public class Wire {
 
         p = new Point(lastPoint.getX() + hypo * Math.cos(angle), lastPoint.getY() - hypo * Math.sin(angle));
         mousePosition.set(p);
-    }
-
-    public Point getMousePosition() {
-        return mousePosition.get();
     }
 
     public void setMousePosition(double x, double y) {
