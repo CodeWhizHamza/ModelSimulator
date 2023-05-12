@@ -59,8 +59,14 @@ public abstract class Pin {
     }
 
     private void addHoverEffectToConnector() {
-        connector.setOnMouseEntered(e -> connector.getScene().setCursor(Cursor.HAND));
-        connector.setOnMouseExited(e -> connector.getScene().setCursor(Cursor.DEFAULT));
+        connector.setOnMouseEntered(e -> {
+            connector.getScene().setCursor(Cursor.HAND);
+            connector.setFill(Colors.white);
+        });
+        connector.setOnMouseExited(e -> {
+            connector.getScene().setCursor(Cursor.DEFAULT);
+            connector.setFill(Colors.terminalGreyColor);
+        });
     }
 
     private void makeTerminalDraggable(Rectangle base) {

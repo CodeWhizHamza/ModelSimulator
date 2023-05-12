@@ -374,8 +374,14 @@ public class Chip {
         pin.setFill(Colors.terminalGreyColor);
         addToolTipToPin(inputs, i, pin);
 
-        pin.setOnMouseEntered(e -> pin.setCursor(Cursor.HAND));
-        pin.setOnMouseExited(e -> pin.setCursor(Cursor.DEFAULT));
+        pin.setOnMouseEntered(e -> {
+            pin.setCursor(Cursor.HAND);
+            pin.setFill(Colors.white);
+        });
+        pin.setOnMouseExited(e -> {
+            pin.setCursor(Cursor.DEFAULT);
+            pin.setFill(Colors.terminalGreyColor);
+        });
 
         return pin;
     }
