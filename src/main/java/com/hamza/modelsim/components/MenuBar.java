@@ -74,12 +74,10 @@ public class MenuBar {
             stage.close();
         });
 
-        menuContainer.getItems().add(new MenuItem("NEW PROJECT"));
-        menuContainer.getItems().add(new MenuItem("OPEN PROJECT"));
-        menuContainer.getItems().add(new MenuItem("SAVE COMPONENT"));
-        menuContainer.getItems().add(new MenuItem("SAVE PROJECT"));
+        menuContainer.getItems().add(new MenuItem("RESET"));
+        menuContainer.getItems().add(new MenuItem("SAVE"));
         menuContainer.getItems().add(quitMenu);
-        menuContainer.show(scene.getWindow(), 0, 500);
+        menuContainer.show(scene.getWindow(), 0, scene.getHeight() - 250);
     }
 
     public HBox getDrawable() {
