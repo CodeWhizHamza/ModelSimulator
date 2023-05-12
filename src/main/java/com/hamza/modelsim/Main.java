@@ -435,42 +435,8 @@ public class Main extends Application {
         if (isWireDrawing) {
             Wire currentWire = wires.get(wires.size() - 1);
 
-            if (currentWire.getSourcePin() instanceof InputPin) return;
             if (currentWire.getSourcePin() instanceof OutputChipPin) return;
-
-            currentWire.setDestination(pin);
-            isWireDrawing = false;
-        } else {
-            isWireDrawing = true;
-            wires.add(new Wire(pin));
-        }
-    }
-
-    private void handleInputChipPinClicked(InputChipPin pin, MouseEvent e) {
-        if (e.getButton() != MouseButton.PRIMARY) return;
-
-        if (isWireDrawing) {
-            Wire currentWire = wires.get(wires.size() - 1);
-
-            if (currentWire.getSourcePin() instanceof InputChipPin) return;
-            if (currentWire.getSourcePin() instanceof OutputPin) return;
-
-            currentWire.setDestination(pin);
-            isWireDrawing = false;
-        } else {
-            isWireDrawing = true;
-            wires.add(new Wire(pin));
-        }
-    }
-
-    private void handleOutputPinClicked(OutputPin pin, MouseEvent e) {
-        if (e.getButton() != MouseButton.PRIMARY) return;
-
-        if (isWireDrawing) {
-            Wire currentWire = wires.get(wires.size() - 1);
-
-            if (currentWire.getSourcePin() instanceof OutputPin) return;
-            if (currentWire.getSourcePin() instanceof InputChipPin) return;
+            if (currentWire.getSourcePin() instanceof InputPin) return;
 
             currentWire.setDestination(pin);
             isWireDrawing = false;
@@ -488,6 +454,41 @@ public class Main extends Application {
 
             if (currentWire.getSourcePin() instanceof InputPin) return;
             if (currentWire.getSourcePin() instanceof OutputChipPin) return;
+
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+
+    private void handleInputChipPinClicked(InputChipPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+
+            if (currentWire.getSourcePin() instanceof OutputPin) return;
+            if (currentWire.getSourcePin() instanceof InputChipPin) return;
+
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    private void handleOutputPinClicked(OutputPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+
+            if (currentWire.getSourcePin() instanceof InputChipPin) return;
+            if (currentWire.getSourcePin() instanceof OutputPin) return;
 
             currentWire.setDestination(pin);
             isWireDrawing = false;
