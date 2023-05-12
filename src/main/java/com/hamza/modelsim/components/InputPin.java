@@ -5,19 +5,23 @@ import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.State;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.HPos;
+import javafx.geometry.Pos;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
 public class InputPin extends Pin {
-    private static int terminalsCount = 0;
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
     private String name;
     private final Text labelForName;
 
     public InputPin(double y) {
         super(y);
-        name = TerminalConstants.name + terminalsCount++;
+        name = TerminalConstants.name;
 
         getPane().setLayoutX(TerminalConstants.leftX);
         state.set(State.LOW);
@@ -50,8 +54,15 @@ public class InputPin extends Pin {
 
         labelForName = new Text(name);
         labelForName.setFill(Colors.white);
-        labelForName.setLayoutX(110);
-        labelForName.setLayoutY(35);
+
+        FlowPane nameBox = new FlowPane();
+        nameBox.setPrefWidth(labelForName.getBoundsInLocal().getWidth() + 2 * 4);
+        nameBox.getChildren().add(labelForName);
+        nameBox.setAlignment(Pos.CENTER);
+        nameBox.setColumnHalignment(HPos.CENTER);
+        nameBox.setBackground(Background.fill(Color.rgb(33, 33, 33)));
+        nameBox.setLayoutX(110);
+        nameBox.setLayoutY(22);
 
         // behaviour
         setTerminalToggler();
@@ -60,7 +71,7 @@ public class InputPin extends Pin {
         getPane().getChildren().add(getExtender());
         getPane().getChildren().add(getButton());
         getPane().getChildren().add(getConnector());
-        getPane().getChildren().add(labelForName);
+        getPane().getChildren().add(nameBox);
     }
 
     private void setTerminalToggler() {

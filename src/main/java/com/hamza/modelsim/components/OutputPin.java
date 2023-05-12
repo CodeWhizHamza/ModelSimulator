@@ -5,16 +5,21 @@ import com.hamza.modelsim.constants.Colors;
 import com.hamza.modelsim.constants.State;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.HPos;
+import javafx.geometry.Pos;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 
 public class OutputPin extends Pin {
-    private static int terminalsCount = 0;
     private String name;
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
 
     public OutputPin(double y) {
         super(y);
-        name = TerminalConstants.name + terminalsCount++;
+        name = TerminalConstants.name;
 
         getPane().setLayoutX(TerminalConstants.rightX);
         getPane().setPrefWidth(100);
@@ -46,10 +51,24 @@ public class OutputPin extends Pin {
         getConnector().setRadius(TerminalConstants.connectorRadius);
         getConnector().setFill(Colors.terminalGreyColor);
 
+
+        Text labelForName = new Text(name);
+        labelForName.setFill(Colors.white);
+
+        FlowPane nameBox = new FlowPane();
+        nameBox.setPrefWidth(labelForName.getBoundsInLocal().getWidth() + 2 * 4);
+        nameBox.getChildren().add(labelForName);
+        nameBox.setAlignment(Pos.CENTER);
+        nameBox.setColumnHalignment(HPos.CENTER);
+        nameBox.setBackground(Background.fill(Color.rgb(33, 33, 33)));
+        nameBox.setLayoutX(40);
+        nameBox.setLayoutY(22);
+
         getPane().getChildren().add(getBase());
         getPane().getChildren().add(getExtender());
         getPane().getChildren().add(getButton());
         getPane().getChildren().add(getConnector());
+        getPane().getChildren().add(nameBox);
 
         observeChangesInY();
     }
