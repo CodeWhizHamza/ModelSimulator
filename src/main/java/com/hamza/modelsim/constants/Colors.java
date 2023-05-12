@@ -11,7 +11,10 @@ public class Colors {
     public static Color terminalGreyColor = Color.rgb(80, 80, 80);
     public static Color warmWhite = Color.rgb(200, 200, 200);
     public static Color terminalActiveColor = Color.rgb(235, 59, 90);
-    public static Color activeWireColor = Color.rgb(235, 59, 90);
 
     public static Color chipColor = Color.rgb(52, 152, 219);
+
+    public static Color highWireColor = Color.rgb(235, 59, 90);
+    public static Color lowWireColor = Color.rgb(127, 140, 141);
+
 }

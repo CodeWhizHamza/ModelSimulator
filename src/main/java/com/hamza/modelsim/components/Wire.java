@@ -27,9 +27,9 @@ public class Wire {
         @Override
         public void changed(ObservableValue<? extends State> observableValue, State state, State t1) {
             if (observableValue.getValue() == State.HIGH)
-                line.setStroke(Colors.activeWireColor);
+                line.setStroke(Colors.highWireColor);
             else
-                line.setStroke(Color.WHITE);
+                line.setStroke(Colors.lowWireColor);
         }
     };
     private Object destination;
@@ -49,7 +49,6 @@ public class Wire {
         this.source = source;
         this.destination = null;
         this.points = FXCollections.observableArrayList();
-        this.state.set(State.LOW);
         mousePosition = new SimpleObjectProperty<>();
         if (source instanceof Pin) {
             mousePosition.set(
@@ -65,19 +64,19 @@ public class Wire {
         line.setStrokeLineJoin(StrokeLineJoin.ROUND);
         line.setStrokeLineCap(StrokeLineCap.ROUND);
         line.setStrokeWidth(Size.WIRE_STROKE_SIZE);
-        line.setStroke(Color.WHITE);
-
+        line.setStroke(Color.WHEAT);
 
         handleSourceMovement();
         handleStateChange();
         handlePointsChange();
         handleMouseMovement();
+
+        this.state.set(State.LOW);
     }
     public Wire(Object source, Wire clickedWire, Point position) {
         this.source = source;
         this.destination = null;
         this.points = FXCollections.observableArrayList();
-        this.state.set(State.LOW);
         mousePosition = new SimpleObjectProperty<>();
         if (source instanceof Pin) {
             mousePosition.set(
@@ -93,7 +92,7 @@ public class Wire {
         line.setStrokeLineJoin(StrokeLineJoin.ROUND);
         line.setStrokeLineCap(StrokeLineCap.ROUND);
         line.setStrokeWidth(Size.WIRE_STROKE_SIZE);
-        line.setStroke(Color.WHITE);
+        line.setStroke(Color.WHEAT);
 
         addPointsFromPreviousWire(clickedWire, position);
 
@@ -101,6 +100,8 @@ public class Wire {
         handleStateChange();
         handlePointsChange();
         handleMouseMovement();
+
+        this.state.set(State.LOW);
     }
 
     private void addPointsFromPreviousWire(Wire clickedWire, Point position) {
