@@ -67,7 +67,7 @@ public class Chip {
         chip = new AnchorPane();
         chip.setLayoutX(this.position.get().getX());
         chip.setLayoutY(this.position.get().getY());
-        chip.setPrefWidth(ChipConstants.chipWidth);
+        chip.setMinWidth(ChipConstants.chipWidth);
         chip.setBackground(Background.fill(Colors.chipColor));
 
         this.position.addListener(change -> {
@@ -90,7 +90,10 @@ public class Chip {
         nameText.setFill(Colors.white);
         nameText.setFont(new Font("Arial", 18));
 
-        nameText.setLayoutX(ChipConstants.chipWidth / 2 - nameText.getBoundsInLocal().getWidth() / 2);
+        double width = nameText.getBoundsInLocal().getWidth() + 2 * (ChipConstants.chipPadding);
+        chip.setPrefWidth(Math.max(width, ChipConstants.chipWidth));
+
+        nameText.setLayoutX(width / 2 - nameText.getBoundsInLocal().getWidth() / 2);
         nameText.setLayoutY(height / 2 + height / 12);
 
         chip.getChildren().add(nameText);
