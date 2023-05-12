@@ -50,6 +50,12 @@ public class Main extends Application {
         mainStage.setFullScreenExitHint("");
         mainStage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
 
+        initPlayground();
+        mainStage.setScene(scene);
+        mainStage.show();
+    }
+
+    private void initPlayground() {
         inputPins = FXCollections.observableArrayList();
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
@@ -225,7 +231,7 @@ public class Main extends Application {
         availableChips.add(new ChipLabel("NAND", "F=!(A&B)"));
         availableChips.add(new ChipLabel("NOR", "F=!(A|B)"));
         availableChips.add(new ChipLabel("7-Seg", ""));
-        
+
         double xPosition = 0;
         double yPosition = 8;
         double paddingY = yPosition * 2;
@@ -286,8 +292,6 @@ public class Main extends Application {
         });
 
         scene.setFill(Colors.backgroundColor);
-        mainStage.setScene(scene);
-        mainStage.show();
     }
 
     private Point getLastPointPositionOfWire() {
@@ -430,6 +434,8 @@ public class Main extends Application {
 
         if (isWireDrawing) {
             Wire currentWire = wires.get(wires.size() - 1);
+
+            if (currentWire.getSourcePin() instanceof InputPin) return;
             if (currentWire.getSourcePin() instanceof OutputChipPin) return;
 
             currentWire.setDestination(pin);
@@ -442,9 +448,13 @@ public class Main extends Application {
 
     private void handleInputChipPinClicked(InputChipPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
+
         if (isWireDrawing) {
             Wire currentWire = wires.get(wires.size() - 1);
+
             if (currentWire.getSourcePin() instanceof InputChipPin) return;
+            if (currentWire.getSourcePin() instanceof OutputPin) return;
+
             currentWire.setDestination(pin);
             isWireDrawing = false;
         } else {
@@ -458,7 +468,10 @@ public class Main extends Application {
 
         if (isWireDrawing) {
             Wire currentWire = wires.get(wires.size() - 1);
+
             if (currentWire.getSourcePin() instanceof OutputPin) return;
+            if (currentWire.getSourcePin() instanceof InputChipPin) return;
+
             currentWire.setDestination(pin);
             isWireDrawing = false;
         } else {
@@ -472,7 +485,10 @@ public class Main extends Application {
 
         if (isWireDrawing) {
             Wire currentWire = wires.get(wires.size() - 1);
+
             if (currentWire.getSourcePin() instanceof InputPin) return;
+            if (currentWire.getSourcePin() instanceof OutputChipPin) return;
+
             currentWire.setDestination(pin);
             isWireDrawing = false;
         } else {
