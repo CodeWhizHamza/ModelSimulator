@@ -1,0 +1,21 @@
+.my-text {
+    -fx-font-family: Calibri Arial;
+    -fx-font-size: 64px;
+    -fx-font-smoothing-type: gray;
+}
+
+.button {
+    -fx-pref-width: 300px;
+    -fx-background-color: #333;
+    -fx-text-fill: #fff;
+    -fx-font-size: 24px;
+    -fx-cursor: hand;
+    -fx-transition: all 0.3s ease;
+    -fx-text-alignment: center;
+}
+.button:hover {
+    -fx-background-color: #444;
+}
+.button:pressed {
+    -fx-translate-y: 0.5px;
+}

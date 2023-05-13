@@ -8,6 +8,7 @@ import javafx.application.Application;
 import javafx.collections.*;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -15,8 +16,10 @@ import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
+import javafx.scene.text.Text;
 import javafx.stage.*;
 import org.jetbrains.annotations.NotNull;
+import com.google.gson.Gson;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -50,9 +53,74 @@ public class Main extends Application {
         mainStage.setFullScreenExitHint("");
         mainStage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
 
-        initPlayground();
+        Gson gson = new Gson();
+
+        showStartMenu();
+
+//        initPlayground();
+
+
         mainStage.setScene(scene);
         mainStage.show();
+    }
+
+    private void showStartMenu() {
+        Button play = new Button("Play");
+        Button optionsBtn = new Button("Options");
+        Button creditsBtn = new Button("Credits");
+        Button quitBtn = new Button("Quit");
+
+        play.setOnAction(e -> showLevelsScreen());
+        optionsBtn.setOnAction(e -> showOptionsScreen());
+        creditsBtn.setOnAction(e -> showCreditsScreen());
+        quitBtn.setOnAction(e -> System.exit(0));
+
+        VBox root = createRoot();
+        root.setFillWidth(true);
+        root.setAlignment(Pos.CENTER);
+        root.setSpacing(40);
+
+        Text title = new Text("Circuit Conundrum");
+        title.setFill(Colors.white);
+        title.getStyleClass().add("my-text");
+
+        VBox menuBox = new VBox(play, optionsBtn, creditsBtn, quitBtn);
+        menuBox.setAlignment(Pos.CENTER);
+        menuBox.setSpacing(10);
+
+        root.getChildren().add(title);
+        root.getChildren().add(menuBox);
+
+        scene = new Scene(root);
+        addStyleSheet("menu-styles.css");
+
+    }
+
+    private void showLevelsScreen() {
+        VBox root = createRoot();
+        root.setFillWidth(true);
+        root.setAlignment(Pos.CENTER);
+        root.setSpacing(40);
+
+        Button backButton = new Button("← back");
+
+        Text title = new Text("Levels");
+        title.setFill(Colors.white);
+        title.getStyleClass().add("my-text");
+
+        BorderPane titleBar = new BorderPane();
+        titleBar.setCenter(title);
+
+        root.getChildren().add(title);
+
+        scene = new Scene(root);
+        addStyleSheet("levels.css");
+    }
+    private void showOptionsScreen() {}
+    private void showCreditsScreen() {}
+
+    private String getLevelString(int level) {
+        return "src/main/resources/levels/level" + level + ".json";
     }
 
     private void initPlayground() {
@@ -70,7 +138,7 @@ public class Main extends Application {
 
         VBox root = createRoot();
         scene = new Scene(root);
-        addStyleSheet();
+        addStyleSheet("main.css");
         canvas = new Canvas();
         MenuBar menuBar = new MenuBar(scene);
 
@@ -321,7 +389,6 @@ public class Main extends Application {
 
         return new Point(x, y);
     }
-
     private void showContextMenuOnPinClick(InputPin pin) {
         Node node = pin.getPane();
 
@@ -342,7 +409,6 @@ public class Main extends Application {
             contextMenu.show(node, event.getScreenX(), event.getScreenY());
         });
     }
-
     @NotNull
     private TextField makeTextField(Object pin, ContextMenu contextMenu) {
         TextField textField = new TextField();
@@ -366,7 +432,6 @@ public class Main extends Application {
         });
         return textField;
     }
-
     private void showContextMenuOnPinClick(OutputPin pin) {
         Node node = pin.getPane();
 
@@ -387,7 +452,6 @@ public class Main extends Application {
             outputPins.remove(pin);
         });
     }
-
     private void removeAllConnectedWiresToPin(InputPin pin) {
         List<Wire> toBeRemoved = new ArrayList<>();
         for(Wire wire : wires) {
@@ -396,7 +460,6 @@ public class Main extends Application {
         }
         deleteWires(toBeRemoved);
     }
-
     private void removeAllConnectedWiresToPin(OutputPin pin) {
         List<Wire> toBeRemoved = new ArrayList<>();
         for(Wire wire : wires) {
@@ -405,7 +468,6 @@ public class Main extends Application {
         }
         deleteWires(toBeRemoved);
     }
-
     private void deleteWires(List<Wire> toBeRemoved) {
         for(var wire : toBeRemoved)
             wire.removeListeners();
@@ -428,7 +490,6 @@ public class Main extends Application {
         }
         deleteWires(wiresToBeRemoved);
     }
-
     private void handleOutputChipPinClicked(OutputChipPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
 
@@ -445,7 +506,6 @@ public class Main extends Application {
             wires.add(new Wire(pin));
         }
     }
-
     private void handleInputPinClicked(InputPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
 
@@ -462,8 +522,6 @@ public class Main extends Application {
             wires.add(new Wire(pin));
         }
     }
-
-
     private void handleInputChipPinClicked(InputChipPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
 
@@ -480,7 +538,6 @@ public class Main extends Application {
             wires.add(new Wire(pin));
         }
     }
-
     private void handleOutputPinClicked(OutputPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
 
@@ -497,7 +554,6 @@ public class Main extends Application {
             wires.add(new Wire(pin));
         }
     }
-
     @NotNull
     private static VBox createRoot() {
         VBox root = new VBox();
@@ -506,23 +562,19 @@ public class Main extends Application {
         root.setSpacing(0);
         return root;
     }
-
-    private void addStyleSheet() {
-        URL stylesheetURLCanBeNull = getClass().getClassLoader().getResource("main.css");
+    private void addStyleSheet(String filename) {
+        URL stylesheetURLCanBeNull = getClass().getClassLoader().getResource(filename);
         String stylesheet = Objects.requireNonNull(stylesheetURLCanBeNull).toExternalForm();
         scene.getStylesheets().add(stylesheet);
     }
-
     @NotNull
     private EventHandler<MouseEvent> addNewOutputTerminal() {
         return e -> outputPins.add(new OutputPin(e.getSceneY() - TerminalConstants.height / 2));
     }
-
     @NotNull
     private EventHandler<MouseEvent> addNewInputTerminal() {
         return e -> inputPins.add(new InputPin(e.getSceneY() - TerminalConstants.height / 2));
     }
-
     public Rectangle makeRectangle(double x, double y, double width, double height, Color color) {
         Rectangle rect = new Rectangle();
         rect.setX(x);

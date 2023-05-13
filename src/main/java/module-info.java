@@ -4,6 +4,7 @@ module com.hamza.modelsim {
     requires org.jetbrains.annotations;
     requires java.scripting;
     requires rhino;
+    requires com.google.gson;
 //    requires java.desktop;
 
     opens com.hamza.modelsim to javafx.fxml;
