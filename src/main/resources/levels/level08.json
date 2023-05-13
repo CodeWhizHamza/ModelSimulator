@@ -1,0 +1,21 @@
+{
+  "name": "Half subtractor",
+  "inputs": {
+    "A": [0, 0, 1, 1],
+    "B": [0, 1, 0, 1]
+  },
+  "outputs": {
+    "D": [0, 1, 1, 0],
+    "B": [0, 1, 0, 0]
+  },
+  "availableGates": {
+    "NOT": ["A=!B"],
+    "AND": ["C=A&B"],
+    "OR": ["C=A|B"]
+  },
+  "maxGates": 7,
+  "maxTime": 60,
+  "previousScore": 0,
+  "isLocked": true,
+  "hint": "most likely to half adder"
+}

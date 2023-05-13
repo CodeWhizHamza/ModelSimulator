@@ -1,0 +1,54 @@
+.container {
+    -fx-padding: 24px;
+}
+
+.my-text {
+    -fx-font-family: Calibri Arial;
+    -fx-font-size: 64px;
+    -fx-font-smoothing-type: gray;
+}
+.button {
+    -fx-background-color: #333;
+    -fx-text-fill: #fff;
+    -fx-font-size: 24px;
+    -fx-cursor: hand;
+    -fx-transition: all 0.3s ease;
+    -fx-text-alignment: center;
+    -fx-padding: 4px 12px;
+}
+.button:hover {
+    -fx-background-color: #444;
+}
+.button:pressed {
+    -fx-translate-y: 0.5px;
+}
+
+.levels-container, .scroll-container {
+    -fx-background-color: #121212;
+    -fx-padding: 8px 0;
+}
+.scroll-container .scroll-bar {
+    -fx-background-color: #444;
+}
+.scroll-container .scroll-bar .thumb {
+    -fx-background-color: #777;
+}
+
+.box {
+    -fx-pref-width: 407px;
+    -fx-pref-height: 343px;
+    -fx-background-color: #333333;
+    -fx-background-radius: 16px;
+    -fx-cursor: hand;
+}
+.box:hover {
+    -fx-background: #444;
+}
+.box-label {
+    -fx-text-alignment: center;
+    -fx-text-fill: #fff;
+    -fx-font-size: 24px;
+}
+.stars-container {
+
+}

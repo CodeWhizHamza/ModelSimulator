@@ -1,0 +1,19 @@
+{
+  "name": "NAND",
+  "inputs": {
+    "A": [0, 0, 1, 1],
+    "B": [0, 1, 0, 1]
+  },
+  "outputs": {
+    "C": [1, 1, 1, 0]
+  },
+  "availableGates": {
+    "NOT": ["A=!B"],
+    "AND": ["C=A&B"]
+  },
+  "maxGates": 2,
+  "maxTime": 30,
+  "previousScore": 1,
+  "isLocked": false,
+  "hint": "use 1 AND and 1 NOT"
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Full subtractor",
+  "inputs": {
+    "A": [0, 0, 0, 0, 1, 1, 1, 1],
+    "B": [0, 0, 1, 1, 0, 0, 1, 1],
+    "Bin": [0, 1, 0, 1, 0, 1, 0, 1]
+  },
+  "outputs": {
+    "D":   [0, 1, 1, 0, 1, 0, 0, 1],
+    "Bout": [0, 1, 1, 1, 0, 0, 0, 1]
+  },
+  "availableGates": {
+    "NOT": ["A=!B"],
+    "AND": ["C=A&B"],
+    "OR": ["C=A|B"],
+    "XOR": ["C=(!A&B)|(!B&A)"]
+  },
+  "maxGates": 8,
+  "maxTime": 75,
+  "previousScore": 0,
+  "isLocked": true,
+  "hint": "cascade half subtractors"
+}

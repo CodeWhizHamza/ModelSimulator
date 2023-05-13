@@ -12,6 +12,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -21,10 +23,12 @@ import javafx.stage.*;
 import org.jetbrains.annotations.NotNull;
 import com.google.gson.Gson;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class Main extends Application {
     public static ObservableList<InputPin> inputPins;
@@ -32,7 +36,7 @@ public class Main extends Application {
     public static ObservableList<Wire> wires;
     public static ObservableList<Chip> chips;
     public static ObservableList<ChipLabel> availableChips;
-    public static Scene scene;
+//    public static Scene scene;
     public static Canvas canvas;
 
     private boolean isWireDrawing;
@@ -40,6 +44,12 @@ public class Main extends Application {
     private boolean isShiftDown;
 
     private Point mousePosition;
+    private List<Level> levels;
+
+    public Stage mainStage;
+    private Image goldenStar;
+    private Image grayStar;
+    private Image lock;
 
     public static void main(String[] args) {
         launch(args);
@@ -47,20 +57,23 @@ public class Main extends Application {
 
     @Override
     public void start(Stage mainStage) {
-
+        this.mainStage = mainStage;
         mainStage.setTitle("Model simulator");
         mainStage.setFullScreen(true);
         mainStage.setFullScreenExitHint("");
         mainStage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
 
-        Gson gson = new Gson();
+        this.levels = new ArrayList<>();
+
+        try {
+            goldenStar = new Image(new FileInputStream("src/main/resources/images/golden-star.png"));
+            grayStar = new Image(new FileInputStream("src/main/resources/images/gray-star.png"));
+            lock = new Image(new FileInputStream("src/main/resources/images/lock.png"));
+        } catch (Exception e) {
+            System.out.println("Image cannot be loaded.");
+        }
 
         showStartMenu();
-
-//        initPlayground();
-
-
-        mainStage.setScene(scene);
         mainStage.show();
     }
 
@@ -91,36 +104,121 @@ public class Main extends Application {
         root.getChildren().add(title);
         root.getChildren().add(menuBox);
 
-        scene = new Scene(root);
-        addStyleSheet("menu-styles.css");
-
+        Scene scene = new Scene(root);
+        addStyleSheet(scene,"menu-styles.css");
+        setStageScene(scene);
     }
 
     private void showLevelsScreen() {
+        loadLevels();
+
         VBox root = createRoot();
+        root.getStyleClass().add("container");
         root.setFillWidth(true);
-        root.setAlignment(Pos.CENTER);
         root.setSpacing(40);
 
         Button backButton = new Button("← back");
+        backButton.setOnAction(e -> showStartMenu());
 
-        Text title = new Text("Levels");
+        Text title = new Text("Levels     ");
         title.setFill(Colors.white);
         title.getStyleClass().add("my-text");
 
         BorderPane titleBar = new BorderPane();
+        titleBar.setLeft(backButton);
         titleBar.setCenter(title);
 
-        root.getChildren().add(title);
+        FlowPane levelsContainer = new FlowPane();
+        levelsContainer.setHgap(40);
+        levelsContainer.setVgap(40);
+        levelsContainer.setPrefWrapLength(1305);
+        levelsContainer.setAlignment(Pos.TOP_CENTER);
+        levelsContainer.getStyleClass().add("levels-container");
+        
+        List<VBox> levelBoxes = generateLevelBoxes();
 
-        scene = new Scene(root);
-        addStyleSheet("levels.css");
+        for(var box : levelBoxes)
+            levelsContainer.getChildren().add(box);
+
+
+//        TableView<>
+
+        ScrollPane scrollContainer = new ScrollPane();
+        scrollContainer.setContent(levelsContainer);
+        scrollContainer.getStyleClass().add("scroll-container");
+        scrollContainer.setFitToHeight(true);
+        scrollContainer.setFitToWidth(true);
+
+        root.getChildren().add(titleBar);
+        root.getChildren().add(scrollContainer);
+
+        Scene scene = new Scene(root);
+        addStyleSheet(scene, "levels.css");
+        setStageScene(scene);
     }
+
     private void showOptionsScreen() {}
     private void showCreditsScreen() {}
 
-    private String getLevelString(int level) {
-        return "src/main/resources/levels/level" + level + ".json";
+    private List<VBox> generateLevelBoxes() {
+        List<VBox> boxes = new ArrayList<>();
+
+        for (var level : levels) {
+            VBox box = new VBox();
+            box.getStyleClass().add("box");
+            box.setPrefHeight(343);
+            box.setPrefWidth(407);
+            box.setSpacing(64);
+            box.setAlignment(Pos.CENTER);
+
+            Label name = new Label(level.name);
+            name.getStyleClass().add("box-label");
+
+            if (level.isLocked) {
+                box.getChildren().add(new ImageView(lock));
+            } else {
+                HBox stars = new HBox();
+                stars.setSpacing(36);
+                stars.setAlignment(Pos.BASELINE_CENTER);
+                stars.getStyleClass().add("stars-container");
+                int starsAdded = 0;
+
+                for (int i = 0; i < level.previousScore; i++, starsAdded++)
+                    stars.getChildren().add(new ImageView(goldenStar));
+
+                for(; starsAdded < 3; starsAdded++)
+                    stars.getChildren().add(new ImageView(grayStar));
+
+                stars.getChildren().get(1).setStyle("-fx-translate-y: -22px");
+                box.getChildren().add(stars);
+            }
+            box.getChildren().add(name);
+            boxes.add(box);
+        }
+
+        return boxes;
+    }
+    private void loadLevels() {
+        List<File> levelsFiles = new ArrayList<>(getFiles("src/main/resources/levels"));
+        levelsFiles.sort(Comparator.comparing(File::getName));
+
+        System.out.println(levelsFiles);
+
+        Gson gson = new Gson();
+        for (File level : levelsFiles) {
+            try {
+                levels.add(gson.fromJson(new FileReader(getLevelString(level.getName())), Level.class));
+            } catch (FileNotFoundException e) {
+                System.out.println("Cannot open file: " + level.getName());
+            }
+        }
+    }
+    private String getLevelString(String fileName) {
+        return "src/main/resources/levels/" + fileName;
+    }
+    private List<File> getFiles(String directoryPath) {
+        File directory = new File(directoryPath);
+        return List.of(Objects.requireNonNull(directory.listFiles()));
     }
 
     private void initPlayground() {
@@ -137,8 +235,8 @@ public class Main extends Application {
         mousePosition = new Point();
 
         VBox root = createRoot();
-        scene = new Scene(root);
-        addStyleSheet("main.css");
+        Scene scene = new Scene(root);
+        addStyleSheet(scene, "main.css");
         canvas = new Canvas();
         MenuBar menuBar = new MenuBar(scene);
 
@@ -362,6 +460,11 @@ public class Main extends Application {
         scene.setFill(Colors.backgroundColor);
     }
 
+    private void setStageScene(Scene scene) {
+        mainStage.setScene(scene);
+        mainStage.setFullScreen(false);
+        mainStage.setFullScreen(true);
+    }
     private Point getLastPointPositionOfWire() {
         Wire last = wires.get(wires.size() - 1);
         double x = 0, y = 0;
@@ -562,9 +665,10 @@ public class Main extends Application {
         root.setSpacing(0);
         return root;
     }
-    private void addStyleSheet(String filename) {
+    private void addStyleSheet(Scene scene, String filename) {
         URL stylesheetURLCanBeNull = getClass().getClassLoader().getResource(filename);
         String stylesheet = Objects.requireNonNull(stylesheetURLCanBeNull).toExternalForm();
+        scene.getStylesheets().clear();
         scene.getStylesheets().add(stylesheet);
     }
     @NotNull

@@ -1,0 +1,19 @@
+{
+  "name": "NOR",
+  "inputs": {
+    "A": [0, 0, 1, 1],
+    "B": [0, 1, 0, 1]
+  },
+  "outputs": {
+    "C": [1, 0, 0, 0]
+  },
+  "availableGates": {
+    "NOT": ["A=!B"],
+    "AND": ["C=A&B"]
+  },
+  "maxGates": 3,
+  "maxTime": 30,
+  "previousScore": 0,
+  "isLocked": true,
+  "hint": "2 NOTs and 1 AND"
+}
