@@ -16,6 +16,7 @@ import javafx.scene.text.Text;
 public class OutputPin extends Pin {
     private String name;
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
+    private final Text labelForName;
 
     public OutputPin(double y) {
         super(y);
@@ -52,7 +53,7 @@ public class OutputPin extends Pin {
         getConnector().setFill(Colors.terminalGreyColor);
 
 
-        Text labelForName = new Text(name);
+        labelForName = new Text(name);
         labelForName.setFill(Colors.white);
 
         FlowPane nameBox = new FlowPane();
@@ -96,5 +97,6 @@ public class OutputPin extends Pin {
 
     public void setName(String name) {
         this.name = name;
+        labelForName.setText(name);
     }
 }
