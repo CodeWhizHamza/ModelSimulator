@@ -20,6 +20,7 @@ import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.*;
 import javafx.util.Duration;
@@ -53,6 +54,8 @@ public class Main extends Application {
     private Image goldenStar;
     private Image grayStar;
     private Image lock;
+    private Image help;
+    private Image truthTable;
 
     public static void main(String[] args) {
         launch(args);
@@ -72,11 +75,16 @@ public class Main extends Application {
             goldenStar = new Image(new FileInputStream("src/main/resources/images/golden-star.png"));
             grayStar = new Image(new FileInputStream("src/main/resources/images/gray-star.png"));
             lock = new Image(new FileInputStream("src/main/resources/images/lock.png"));
+            help = new Image(new FileInputStream("src/main/resources/images/help.png"));
+            truthTable = new Image(new FileInputStream("src/main/resources/images/truth-table.png"));
         } catch (Exception e) {
             System.out.println("Image cannot be loaded.");
         }
 
-        showStartMenu();
+//        showStartMenu();
+
+        loadLevels();
+        initPlayground(levels.get(0));
         mainStage.show();
     }
 
@@ -111,7 +119,6 @@ public class Main extends Application {
         addStyleSheet(scene,"menu-styles.css");
         setStageScene(scene);
     }
-
     private void showLevelsScreen() {
         loadLevels();
 
@@ -159,7 +166,6 @@ public class Main extends Application {
         addStyleSheet(scene, "levels.css");
         setStageScene(scene);
     }
-
     private void showOptionsScreen() {}
     private void showCreditsScreen() {}
 
@@ -215,9 +221,16 @@ public class Main extends Application {
 
                 stars.getChildren().get(1).setStyle("-fx-translate-y: -22px");
                 box.getChildren().add(stars);
+
+
+                box.setOnMouseClicked(e -> {
+                    if (e.getButton() != MouseButton.PRIMARY) return;
+                    initPlayground(level);
+                });
             }
             box.getChildren().add(name);
             boxes.add(box);
+
         }
 
         return boxes;
@@ -243,7 +256,7 @@ public class Main extends Application {
         return List.of(Objects.requireNonNull(directory.listFiles()));
     }
 
-    private void initPlayground() {
+    private void initPlayground(Level level) {
         inputPins = FXCollections.observableArrayList();
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
@@ -262,13 +275,31 @@ public class Main extends Application {
         canvas = new Canvas();
         MenuBar menuBar = new MenuBar(scene);
 
+        // Show title on top of screen
+        Text title = new Text(level.name);
+        title.setFont(new Font("Arial", 32));
+        title.setFill(Colors.white);
+        title.setStyle("-fx-text-fill: #ffffff; -fx-text-alignment: center; -fx-font-size: 32px;");
+        title.setLayoutX(canvas.getDrawable().getPrefWidth() / 2 - title.getBoundsInLocal().getWidth() / 2);
+        title.setLayoutY(40);
+        canvas.add(title);
+
+        // Hint
+        Text hint = new Text("Hint: " + level.hint);
+        hint.setFont(new Font("Arial", 16));
+        hint.setFill(Colors.warmWhite);
+        hint.setLayoutX(30);
+        hint.setLayoutY(canvas.getDrawable().getPrefHeight() - hint.getBoundsInLocal().getHeight() - 4);
+
+        canvas.add(hint);
+        hint.setVisible(false);
+
         inputPins.addListener((ListChangeListener<? super InputPin>) change -> inputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleInputPinClicked(pin, e))));
         outputPins.addListener((ListChangeListener<? super OutputPin>) change -> outputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputPinClicked(pin, e))));
         chips.addListener((ListChangeListener<? super Chip>) change -> chips.forEach(chip -> {
             chip.getInputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleInputChipPinClicked(pin, e)));
 
             if (chip.getOutputPins() == null) return;
-
             chip.getOutputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputChipPinClicked(pin, e)));
         }));
 
@@ -409,16 +440,21 @@ public class Main extends Application {
                 menuBar.addButton(button);
             });
         });
+//
+//        // * Add default 3 gates.
+//        availableChips.add(new ChipLabel("NOT", "F=!A"));
+//        availableChips.add(new ChipLabel("AND", "F=A&B"));
+//        availableChips.add(new ChipLabel("OR", "F=A|B"));
+//        availableChips.add(new ChipLabel("3 in OR", "F=A|B|C"));
+//        availableChips.add(new ChipLabel("3 in AND", "F=A&B&C"));
+//        availableChips.add(new ChipLabel("NAND", "F=!(A&B)"));
+//        availableChips.add(new ChipLabel("NOR", "F=!(A|B)"));
+//        availableChips.add(new ChipLabel("7-Seg", ""));
 
-        // * Add default 3 gates.
-        availableChips.add(new ChipLabel("NOT", "F=!A"));
-        availableChips.add(new ChipLabel("AND", "F=A&B"));
-        availableChips.add(new ChipLabel("OR", "F=A|B"));
-        availableChips.add(new ChipLabel("3 in OR", "F=A|B|C"));
-        availableChips.add(new ChipLabel("3 in AND", "F=A&B&C"));
-        availableChips.add(new ChipLabel("NAND", "F=!(A&B)"));
-        availableChips.add(new ChipLabel("NOR", "F=!(A|B)"));
-        availableChips.add(new ChipLabel("7-Seg", ""));
+        // Add available gates
+        for (String key : level.availableGates.keySet()) {
+            availableChips.add(new ChipLabel(key, level.availableGates.get(key)));
+        }
 
         double xPosition = 0;
         double yPosition = 8;
@@ -480,6 +516,7 @@ public class Main extends Application {
         });
 
         scene.setFill(Colors.backgroundColor);
+        setStageScene(scene);
     }
 
     private void setStageScene(Scene scene) {
