@@ -99,4 +99,12 @@ public class OutputPin extends Pin {
         this.name = name;
         labelForName.setText(name);
     }
+
+    public State getState() {
+        return state.get();
+    }
+
+    public SimpleObjectProperty<State> stateProperty() {
+        return state;
+    }
 }

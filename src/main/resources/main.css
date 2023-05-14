@@ -9,7 +9,7 @@
 }
 .button:hover {
     -fx-cursor: hand;
-    -fx-background-color: #333;
+    -fx-background-color: #333 !important;
 }
 .button:pressed {
     -fx-translate-y: .5px;
@@ -37,4 +37,10 @@
     -fx-background-radius: 8px;
 }
 
-/* LEVEL styling */
+.scroll-container {-fx-background-color: #333; }
+.scroll-container .scroll-bar {
+    -fx-background-color: #333;
+}
+.scroll-container .thumb {
+    -fx-background-color: #555;
+}

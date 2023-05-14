@@ -1,13 +1,21 @@
 package com.hamza.modelsim;
 
-import com.hamza.modelsim.abstractcomponents.*;
-import com.hamza.modelsim.components.*;
+import com.google.gson.Gson;
+import com.hamza.modelsim.abstractcomponents.ChipLabel;
+import com.hamza.modelsim.abstractcomponents.Level;
+import com.hamza.modelsim.abstractcomponents.Point;
 import com.hamza.modelsim.components.MenuBar;
-import com.hamza.modelsim.constants.*;
+import com.hamza.modelsim.components.*;
+import com.hamza.modelsim.constants.Colors;
+import com.hamza.modelsim.constants.State;
+import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.collections.*;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -16,23 +24,27 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.*;
+import javafx.scene.shape.Polyline;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.stage.*;
+import javafx.stage.Popup;
+import javafx.stage.Screen;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
-import com.google.gson.Gson;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.*;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Main extends Application {
     public static ObservableList<InputPin> inputPins;
@@ -40,25 +52,58 @@ public class Main extends Application {
     public static ObservableList<Wire> wires;
     public static ObservableList<Chip> chips;
     public static ObservableList<ChipLabel> availableChips;
-//    public static Scene scene;
     public static Canvas canvas;
-
+    public Stage mainStage;
     private boolean isWireDrawing;
     private boolean isChipDrawing;
     private boolean isShiftDown;
-
     private Point mousePosition;
     private List<Level> levels;
-
-    public Stage mainStage;
+    private long startTime;
     private Image goldenStar;
     private Image grayStar;
     private Image lock;
     private Image help;
     private Image truthTable;
+    private Image check;
+    private Image cross;
+    private Image menu;
+    private Image retry;
+    private Image next;
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    private static void testForInputs(Level level, HashMap<String, Boolean> testResults, int i) {
+        StringBuilder input = new StringBuilder("Inputs: ");
+        for (var key : level.inputs.keySet()) {
+            inputPins.stream().filter(pin -> pin.getName().equals(key)).forEach(pin -> pin.setState(level.inputs.get(key)[i] == 0 ? State.LOW : State.HIGH));
+            input.append(key).append("=").append(level.inputs.get(key)[i]).append(" ");
+        }
+        input.append("\nOutputs: ");
+        AtomicBoolean isTrue = new AtomicBoolean(true);
+        for (var key : level.outputs.keySet()) {
+            outputPins.stream().filter(pin -> pin.getName().equals(key)).forEach(pin -> {
+                if (pin.getState() == State.HIGH && level.outputs.get(key)[i] == 0)
+                    isTrue.set(false);
+                if (pin.getState() == State.LOW & level.outputs.get(key)[i] == 1)
+                    isTrue.set(false);
+
+                input.append(key).append("=").append(pin.getState() == State.HIGH ? "1" : "0").append(" ");
+            });
+        }
+
+        testResults.put(input.toString(), isTrue.get());
+    }
+
+    @NotNull
+    private static VBox createRoot() {
+        VBox root = new VBox();
+        root.setBackground(Background.fill(Colors.backgroundColor));
+        root.setFillWidth(true);
+        root.setSpacing(0);
+        return root;
     }
 
     @Override
@@ -77,14 +122,16 @@ public class Main extends Application {
             lock = new Image(new FileInputStream("src/main/resources/images/lock.png"));
             help = new Image(new FileInputStream("src/main/resources/images/help.png"));
             truthTable = new Image(new FileInputStream("src/main/resources/images/truth-table.png"));
+            check = new Image(new FileInputStream("src/main/resources/images/check.png"));
+            cross = new Image(new FileInputStream("src/main/resources/images/cross.png"));
+            menu = new Image(new FileInputStream("src/main/resources/images/menu.png"));
+            retry = new Image(new FileInputStream("src/main/resources/images/retry.png"));
+            next = new Image(new FileInputStream("src/main/resources/images/next.png"));
         } catch (Exception e) {
             System.out.println("Image cannot be loaded.");
         }
 
-//        showStartMenu();
-
-        loadLevels();
-        initPlayground(levels.get(0));
+        showStartMenu();
         mainStage.show();
     }
 
@@ -116,9 +163,10 @@ public class Main extends Application {
         root.getChildren().add(menuBox);
 
         Scene scene = new Scene(root);
-        addStyleSheet(scene,"menu-styles.css");
+        addStyleSheet(scene, "menu-styles.css");
         setStageScene(scene);
     }
+
     private void showLevelsScreen() {
         loadLevels();
 
@@ -144,10 +192,10 @@ public class Main extends Application {
         levelsContainer.setPrefWrapLength(1305);
         levelsContainer.setAlignment(Pos.TOP_CENTER);
         levelsContainer.getStyleClass().add("levels-container");
-        
+
         List<VBox> levelBoxes = generateLevelBoxes();
 
-        for(var box : levelBoxes)
+        for (var box : levelBoxes)
             levelsContainer.getChildren().add(box);
 
 
@@ -166,8 +214,12 @@ public class Main extends Application {
         addStyleSheet(scene, "levels.css");
         setStageScene(scene);
     }
-    private void showOptionsScreen() {}
-    private void showCreditsScreen() {}
+
+    private void showOptionsScreen() {
+    }
+
+    private void showCreditsScreen() {
+    }
 
     private List<VBox> generateLevelBoxes() {
         List<VBox> boxes = new ArrayList<>();
@@ -194,15 +246,15 @@ public class Main extends Application {
                     animation.setCycleCount(1);
                     double rotation = 8;
                     animation.getKeyFrames().addAll(
-                        new KeyFrame(Duration.ZERO, e -> image.setStyle("-fx-rotate: 0deg")),
-                        new KeyFrame(Duration.millis(62), e -> image.setStyle("-fx-rotate: " + rotation + "deg")),
-                        new KeyFrame(Duration.millis(62 * 2), e -> image.setStyle("-fx-rotate: 0deg")),
-                        new KeyFrame(Duration.millis(62 * 3), e -> image.setStyle("-fx-rotate: -" + rotation + "deg")),
-                        new KeyFrame(Duration.millis(62 * 4), e -> image.setStyle("-fx-rotate: 0deg")),
-                        new KeyFrame(Duration.millis(62 * 5), e -> image.setStyle("-fx-rotate: " + rotation + "deg")),
-                        new KeyFrame(Duration.millis(62 * 6), e -> image.setStyle("-fx-rotate: 0deg")),
-                        new KeyFrame(Duration.millis(62 * 7), e -> image.setStyle("-fx-rotate: -" + rotation + "deg")),
-                        new KeyFrame(Duration.millis(62 * 8), e -> image.setStyle("-fx-rotate: 0deg"))
+                            new KeyFrame(Duration.ZERO, e -> image.setStyle("-fx-rotate: 0deg")),
+                            new KeyFrame(Duration.millis(62), e -> image.setStyle("-fx-rotate: " + rotation + "deg")),
+                            new KeyFrame(Duration.millis(62 * 2), e -> image.setStyle("-fx-rotate: 0deg")),
+                            new KeyFrame(Duration.millis(62 * 3), e -> image.setStyle("-fx-rotate: -" + rotation + "deg")),
+                            new KeyFrame(Duration.millis(62 * 4), e -> image.setStyle("-fx-rotate: 0deg")),
+                            new KeyFrame(Duration.millis(62 * 5), e -> image.setStyle("-fx-rotate: " + rotation + "deg")),
+                            new KeyFrame(Duration.millis(62 * 6), e -> image.setStyle("-fx-rotate: 0deg")),
+                            new KeyFrame(Duration.millis(62 * 7), e -> image.setStyle("-fx-rotate: -" + rotation + "deg")),
+                            new KeyFrame(Duration.millis(62 * 8), e -> image.setStyle("-fx-rotate: 0deg"))
                     );
                     animation.play();
                 });
@@ -216,7 +268,7 @@ public class Main extends Application {
                 for (int i = 0; i < level.previousScore; i++, starsAdded++)
                     stars.getChildren().add(new ImageView(goldenStar));
 
-                for(; starsAdded < 3; starsAdded++)
+                for (; starsAdded < 3; starsAdded++)
                     stars.getChildren().add(new ImageView(grayStar));
 
                 stars.getChildren().get(1).setStyle("-fx-translate-y: -22px");
@@ -235,7 +287,9 @@ public class Main extends Application {
 
         return boxes;
     }
+
     private void loadLevels() {
+        levels.clear();
         List<File> levelsFiles = new ArrayList<>(getFiles());
         levelsFiles.sort(Comparator.comparing(File::getName));
 
@@ -248,15 +302,19 @@ public class Main extends Application {
             }
         }
     }
+
     private String getLevelString(String fileName) {
         return "src/main/resources/levels/" + fileName;
     }
+
     private List<File> getFiles() {
         File directory = new File("src/main/resources/levels");
         return List.of(Objects.requireNonNull(directory.listFiles()));
     }
 
     private void initPlayground(Level level) {
+        startTime = System.currentTimeMillis();
+
         inputPins = FXCollections.observableArrayList();
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
@@ -290,9 +348,249 @@ public class Main extends Application {
         hint.setFill(Colors.warmWhite);
         hint.setLayoutX(30);
         hint.setLayoutY(canvas.getDrawable().getPrefHeight() - hint.getBoundsInLocal().getHeight() - 4);
-
         canvas.add(hint);
         hint.setVisible(false);
+
+        // Truth table and help button
+        Button helpButton = new Button();
+        helpButton.setGraphic(new ImageView(help));
+        helpButton.setStyle("-fx-padding: 0");
+        helpButton.setLayoutX(24);
+        helpButton.setLayoutY(10);
+        canvas.add(helpButton);
+
+        ScrollPane scrollContainer = new ScrollPane();
+        scrollContainer.getStyleClass().add("scroll-container");
+        helpButton.setOnAction(e -> {
+            Popup popup = new Popup();
+            VBox popupContent = new VBox();
+            popupContent.setPrefWidth(500);
+            popupContent.setPrefHeight(500);
+            popupContent.setSpacing(16);
+            popupContent.setStyle("-fx-background-color: #444; -fx-padding: 24px;");
+
+            Text titleLabel = new Text("Description");
+            titleLabel.setFill(Colors.white);
+            titleLabel.setStyle("-fx-font-family: Calibri; -fx-font-size: 32px; -fx-font-weight: bold;");
+
+            Button closeButton = new Button("× Close");
+            closeButton.setStyle("-fx-font-size: 16px; -fx-background-color: #333");
+            closeButton.setOnAction(event -> popup.hide());
+
+            Text description = new Text(level.description);
+            description.setFill(Colors.white);
+            description.setWrappingWidth(440);
+            description.setStyle("-fx-font-size: 18px; -fx-font-family: Calibri;");
+
+            scrollContainer.setContent(popupContent);
+            scrollContainer.setStyle("-fx-background-color: #444;");
+            scrollContainer.setFitToHeight(true);
+            scrollContainer.setFitToWidth(true);
+            scrollContainer.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            Platform.runLater(() -> scrollContainer.setVvalue(0));
+
+            popupContent.getChildren().addAll(titleLabel, description, closeButton);
+            popup.getContent().add(scrollContainer);
+            popup.setAutoHide(true);
+            popup.show(mainStage);
+        });
+
+        Button truthTableButton = new Button();
+        truthTableButton.setGraphic(new ImageView(truthTable));
+        truthTableButton.setStyle("-fx-padding: 0");
+        truthTableButton.setLayoutX(72);
+        truthTableButton.setLayoutY(10);
+        canvas.add(truthTableButton);
+
+        truthTableButton.setOnAction(e -> {
+            Popup popup = new Popup();
+            VBox popupContent = new VBox();
+            popupContent.setPrefWidth(500);
+            popupContent.setPrefHeight(500);
+            popupContent.setSpacing(16);
+            popupContent.setStyle("-fx-background-color: #444; -fx-padding: 24px;");
+
+            Text titleLabel = new Text("Truth table");
+            titleLabel.setFill(Colors.white);
+            titleLabel.setStyle("-fx-font-family: Calibri; -fx-font-size: 32px; -fx-font-weight: bold;");
+
+            Button closeButton = new Button("× Close");
+            closeButton.setStyle("-fx-font-size: 16px; -fx-background-color: #333");
+            closeButton.setOnAction(event -> popup.hide());
+
+            GridPane table = new GridPane();
+            table.setAlignment(Pos.CENTER);
+            table.setVgap(8);
+            table.setHgap(12);
+            table.setBorder(Border.stroke(Colors.white));
+            table.setStyle("-fx-padding: 4px");
+
+            List<String> keys = new ArrayList<>(level.inputs.keySet());
+            keys.addAll(level.outputs.keySet());
+
+            HashMap<String, Integer[]> values = new HashMap<>();
+            for (var key : level.inputs.keySet()) {
+                values.put(key, level.inputs.get(key));
+            }
+            for (var key : level.outputs.keySet()) {
+                values.put(key, level.outputs.get(key));
+            }
+
+            for (int i = 0; i < keys.size(); i++) {
+                List<Text> fields = new ArrayList<>();
+                Text text = new Text(keys.get(i));
+                text.setStyle("-fx-fill: #fff; -fx-font-size: 20px; -fx-font-family: Calibri; -fx-font-weight: bold; -fx-text-alignment: center;");
+                fields.add(text);
+
+                for (var value : values.get(keys.get(i))) {
+                    text = new Text(Integer.toString(value));
+                    text.setStyle("-fx-fill: #fff; -fx-font-size: 20px; -fx-font-family: Calibri; -fx-font-weight: bold; -fx-text-alignment: center;");
+                    fields.add(text);
+                }
+
+                table.addColumn(i, fields.toArray(new Text[]{}));
+            }
+            scrollContainer.setContent(popupContent);
+            scrollContainer.setStyle("-fx-background-color: #444;");
+            scrollContainer.setFitToWidth(true);
+            scrollContainer.setFitToHeight(true);
+            Platform.runLater(() -> scrollContainer.setVvalue(0));
+
+            popupContent.getChildren().addAll(titleLabel, table, closeButton);
+            popup.getContent().add(scrollContainer);
+            popup.setAutoHide(true);
+            popup.show(mainStage);
+        });
+
+        Button testCircuitButton = new Button("Test Circuit");
+        testCircuitButton.setStyle("-fx-background-color: #222; -fx-padding: 12px 24px");
+        testCircuitButton.setLayoutY(canvas.getDrawable().getPrefHeight() - 50);
+        testCircuitButton.setLayoutX(canvas.getDrawable().getPrefWidth() - 180);
+        canvas.add(testCircuitButton);
+
+        /*
+        ** TESTS
+        1. equal inputs
+        2. equal outputs
+        3. Truth table matches.
+         */
+        testCircuitButton.setOnAction(e -> {
+            HashMap<String, Boolean> testResults = new HashMap<>();
+
+            testResults.put("inputs matches", level.inputs.size() == inputPins.size());
+            testResults.put("outputs matches", level.outputs.size() == outputPins.size());
+            @SuppressWarnings("SuspiciousMethodCalls") int numberOfRows = level.inputs.get(level.inputs.keySet().toArray()[0]).length;
+
+            Timeline timeline = new Timeline();
+            int delay = 200;
+            for (int i = 0; i < numberOfRows; i++) {
+                int finalI = i;
+                timeline.getKeyFrames().add(new KeyFrame(Duration.millis((i + 1) * delay), actionEvent -> testForInputs(level, testResults, finalI)));
+            }
+            timeline.play();
+            timeline.setOnFinished(actionEvent -> {
+                AtomicReference<Popup> resultsPopup = new AtomicReference<>();
+                Timeline tl = new Timeline();
+                tl.getKeyFrames().add(
+                        new KeyFrame(Duration.seconds(0), a -> resultsPopup.set(showResultsPopup(scrollContainer, testResults)))
+                );
+                tl.getKeyFrames().add(new KeyFrame(Duration.seconds(2), ignored -> {
+                    if (testResults.values().stream().filter(v -> !v).toList().size() > 0)
+                        return; // No win
+
+                    // Win condition
+                    resultsPopup.get().hide();
+
+                    ArrayList<String> couldDoBetter = new ArrayList<>();
+                    int stars = 1;
+
+                    if (level.maxGates >= chips.size())
+                        stars += 1;
+                    else
+                        couldDoBetter.add("Try to use less number of gates.");
+
+                    if ((System.currentTimeMillis() - startTime) / 1000 <= level.maxTime)
+                        stars += 1;
+                    else
+                        couldDoBetter.add("Try to solve it fast.");
+
+                    if (level.previousScore < stars)
+                        level.previousScore = stars;
+                    int nextIndex = levels.indexOf(level) + 1;
+                    if (nextIndex != levels.size())
+                        levels.get(nextIndex).isLocked = false;
+                    saveLevels();
+
+                    Popup popup = new Popup();
+                    VBox popupContent = new VBox();
+                    popupContent.setPrefWidth(500);
+                    popupContent.setPrefHeight(500);
+                    popupContent.setSpacing(50);
+                    popupContent.setAlignment(Pos.CENTER);
+                    popupContent.setStyle("-fx-background-color: #444; -fx-padding: 24px;");
+
+                    Text titleLabel = new Text("You Won");
+                    titleLabel.setFill(Colors.white);
+                    titleLabel.setStyle("-fx-font-family: Calibri; -fx-font-size: 32px; -fx-font-weight: bold;");
+
+                    HBox starsContainer = new HBox();
+                    starsContainer.setAlignment(Pos.CENTER);
+
+                    for (int i = 0; i < stars; i++) {
+                        ImageView goldenStarImageView = new ImageView(goldenStar);
+                        starsContainer.getChildren().add(goldenStarImageView);
+                    }
+
+                    for (int i = 0; i < 3 - stars; i++)
+                        starsContainer.getChildren().add(new ImageView(grayStar));
+
+                    starsContainer.getChildren().get(1).setStyle("-fx-translate-y: -22px;");
+
+                    VBox improvements = new VBox();
+                    for (var improvement : couldDoBetter) {
+                        Text text = new Text(improvement);
+                        text.setStyle("-fx-fill: #fff; -fx-font-size: 14px; -fx-font-family: Calibri;");
+                        improvements.getChildren().add(text);
+                    }
+
+                    HBox buttons = new HBox();
+                    buttons.setAlignment(Pos.CENTER);
+                    buttons.setSpacing(16);
+
+                    Button menuButton = new Button();
+                    menuButton.setGraphic(new ImageView(menu));
+                    menuButton.setOnAction(event -> {
+                        popup.hide();
+                        showLevelsScreen();
+                    });
+
+                    Button retryButton = new Button();
+                    retryButton.setGraphic(new ImageView(retry));
+                    retryButton.setOnAction(event -> {
+                        popup.hide();
+                        initPlayground(level);
+                    });
+
+                    Button nextButton = new Button();
+                    nextButton.setGraphic(new ImageView(next));
+                    nextButton.setOnAction(event -> {
+                        popup.hide();
+                        initPlayground(levels.get(nextIndex));
+                    });
+
+                    buttons.getChildren().addAll(menuButton, retryButton);
+                    if (nextIndex != levels.size())
+                        buttons.getChildren().add(nextButton);
+
+                    popupContent.getChildren().addAll(titleLabel, starsContainer, improvements, buttons);
+                    popup.getContent().add(popupContent);
+                    popup.setAutoHide(true);
+                    popup.show(mainStage);
+                }));
+                tl.play();
+            });
+
+        });
 
         inputPins.addListener((ListChangeListener<? super InputPin>) change -> inputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleInputPinClicked(pin, e))));
         outputPins.addListener((ListChangeListener<? super OutputPin>) change -> outputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputPinClicked(pin, e))));
@@ -303,18 +601,15 @@ public class Main extends Application {
             chip.getOutputPins().forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputChipPinClicked(pin, e)));
         }));
 
-        scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.SHIFT) isShiftDown = true;
-        });
+        scene.setOnKeyPressed(e -> isShiftDown = e.getCode() == KeyCode.SHIFT);
         scene.setOnKeyReleased(e -> {
             if (e.getCode() == KeyCode.SHIFT) isShiftDown = false;
         });
 
         scene.setOnMouseClicked(e -> {
             if (!(e.getTarget() instanceof Pane)) return;
-
             if (e.getButton() == MouseButton.SECONDARY) {
-                if(isWireDrawing) {
+                if (isWireDrawing) {
                     isWireDrawing = false;
                     wires.remove(wires.size() - 1);
                 }
@@ -331,10 +626,10 @@ public class Main extends Application {
                     if (chip.getFunctions() != null)
                         chips.add(new Chip(chip.getName(), chip.getFunctions(), position));
                     else
-                       chips.add(new Chip(chip.getName(), position));
+                        chips.add(new Chip(chip.getName(), position));
                     isChipDrawing = false;
                 }
-                if ( wires.size() > 0 && isWireDrawing) {
+                if (wires.size() > 0 && isWireDrawing) {
                     if (!isShiftDown) {
                         wires.get(wires.size() - 1).addPoint(
                                 new Point(mousePosition.getX(), mousePosition.getY())
@@ -355,34 +650,7 @@ public class Main extends Application {
             }
 
         });
-        scene.setOnMouseMoved(e -> {
-            mousePosition.setX(e.getSceneX());
-            mousePosition.setY(e.getSceneY());
-
-            if (wires.size() != 0 && isWireDrawing) {
-
-                if (!isShiftDown) {
-                    wires.get(wires.size() - 1).setMousePosition(
-                        new Point(mousePosition.getX(), mousePosition.getY())
-                    );
-                } else {
-                    Point p = getLastPointPositionOfWire();
-
-                    double absDiffX = Math.abs(mousePosition.getX() - p.getX());
-                    double absDiffY = Math.abs(mousePosition.getY() - p.getY());
-
-                    if (absDiffY > absDiffX) {
-                        wires.get(wires.size() - 1).setMousePosition(p.getX(), mousePosition.getY());
-                    } else {
-                        wires.get(wires.size() - 1).setMousePosition(mousePosition.getX(), p.getY());
-                    }
-                }
-
-            }
-            if(chips.size() != 0 && isChipDrawing) {
-                chips.get(chips.size() - 1).setPosition(new Point(mousePosition.getX(), mousePosition.getY()));
-            }
-        });
+        scene.setOnMouseMoved(handleMouseMoved());
 
         // redraw when wires array changes.
         wires.addListener((ListChangeListener<? super Wire>) change -> {
@@ -440,16 +708,6 @@ public class Main extends Application {
                 menuBar.addButton(button);
             });
         });
-//
-//        // * Add default 3 gates.
-//        availableChips.add(new ChipLabel("NOT", "F=!A"));
-//        availableChips.add(new ChipLabel("AND", "F=A&B"));
-//        availableChips.add(new ChipLabel("OR", "F=A|B"));
-//        availableChips.add(new ChipLabel("3 in OR", "F=A|B|C"));
-//        availableChips.add(new ChipLabel("3 in AND", "F=A&B&C"));
-//        availableChips.add(new ChipLabel("NAND", "F=!(A&B)"));
-//        availableChips.add(new ChipLabel("NOR", "F=!(A|B)"));
-//        availableChips.add(new ChipLabel("7-Seg", ""));
 
         // Add available gates
         for (String key : level.availableGates.keySet()) {
@@ -483,8 +741,175 @@ public class Main extends Application {
         for (var pin : outputPins)
             pin.draw(canvas.getDrawable());
 
-        // CHIPS
-        chips.addListener((ListChangeListener<? super Chip>) change -> {
+
+        chips.addListener(handleChangeInChips());
+        inputPins.addListener(handleChangeInInputPins());
+        outputPins.addListener(handleChangeInOutputPins());
+
+        insertInputAndOutputPins(level);
+
+        scene.setFill(Colors.backgroundColor);
+        setStageScene(scene);
+    }
+
+    private void saveLevels() {
+        Gson gson = new Gson();
+        for (var level : levels) {
+            String filename = getLevelString(level.filename);
+            FileWriter writer;
+            try {
+                writer = new FileWriter(filename);
+                String json = gson.toJson(level);
+                writer.write(json);
+                writer.close();
+            } catch (IOException e) {
+                System.out.println("Levels cannot be saved.");
+                e.printStackTrace();
+            }
+        }
+        loadLevels();
+    }
+
+    private Popup showResultsPopup(ScrollPane scrollContainer, HashMap<String, Boolean> testResults) {
+        Popup popup = new Popup();
+        VBox popupContent = new VBox();
+        popupContent.setPrefWidth(500);
+        popupContent.setPrefHeight(500);
+        popupContent.setSpacing(16);
+        popupContent.setStyle("-fx-background-color: #444; -fx-padding: 24px;");
+
+        Text titleLabel = new Text(testResults.values().stream().filter(v -> v).count() + "/" + testResults.size() + " Passed");
+        titleLabel.setFill(Colors.white);
+        titleLabel.setStyle("-fx-font-family: Calibri; -fx-font-size: 32px; -fx-font-weight: bold;");
+
+        Button closeButton = new Button("× Close");
+        closeButton.setStyle("-fx-font-size: 16px; -fx-background-color: #333");
+        closeButton.setOnAction(event -> popup.hide());
+
+        VBox results = new VBox();
+        results.setSpacing(8);
+        results.setFillWidth(true);
+
+        for (var key : testResults.keySet().stream().sorted().toList()) {
+            Text testQuery = new Text(key);
+            testQuery.setFill(Colors.white);
+            testQuery.setWrappingWidth(400);
+            testQuery.setStyle("-fx-font-size: 18px; -fx-font-family: Calibri;");
+
+            ImageView image = new ImageView(testResults.get(key) ? check : cross);
+
+            HBox result = new HBox();
+            result.getChildren().add(image);
+            result.getChildren().add(testQuery);
+            result.setSpacing(8);
+            results.getChildren().add(result);
+        }
+
+        scrollContainer.setContent(popupContent);
+        scrollContainer.setStyle("-fx-background-color: #444;");
+        scrollContainer.setFitToHeight(true);
+        scrollContainer.setFitToWidth(true);
+        Platform.runLater(() -> scrollContainer.setVvalue(0));
+
+        popupContent.getChildren().addAll(titleLabel, results, closeButton);
+        popup.getContent().add(scrollContainer);
+        popup.setAutoHide(true);
+        popup.show(mainStage);
+
+        return popup;
+    }
+
+    private void insertInputAndOutputPins(Level level) {
+        AtomicReference<Double> y = new AtomicReference<>((double) 60);
+        level.inputs.keySet().forEach(key -> {
+            InputPin pin = new InputPin(y.get());
+            pin.setName(key);
+            inputPins.add(pin);
+            y.updateAndGet(v -> v + TerminalConstants.height);
+        });
+
+        y.updateAndGet(v -> 16.0);
+        level.outputs.keySet().stream().sorted((s1, s2) -> {
+            int n1, n2;
+            try {
+                n1 = Integer.parseInt(s1);
+                n2 = Integer.parseInt(s2);
+            } catch (NumberFormatException e) {
+                return s1.compareTo(s2);
+            }
+            return Integer.compare(n1, n2);
+        }).forEach(key -> {
+            OutputPin pin = new OutputPin(y.get());
+            pin.setName(key);
+            outputPins.add(pin);
+            y.updateAndGet(v -> {
+                if (level.outputs.size() >= 14)
+                    return v + TerminalConstants.height - 18;
+                else
+                    return v + TerminalConstants.height;
+            });
+        });
+    }
+
+    @NotNull
+    private EventHandler<MouseEvent> handleMouseMoved() {
+        return e -> {
+            mousePosition.setX(e.getSceneX());
+            mousePosition.setY(e.getSceneY());
+
+            if (wires.size() != 0 && isWireDrawing) {
+
+                if (!isShiftDown) {
+                    wires.get(wires.size() - 1).setMousePosition(
+                            new Point(mousePosition.getX(), mousePosition.getY())
+                    );
+                } else {
+                    Point p = getLastPointPositionOfWire();
+
+                    double absDiffX = Math.abs(mousePosition.getX() - p.getX());
+                    double absDiffY = Math.abs(mousePosition.getY() - p.getY());
+
+                    if (absDiffY > absDiffX) {
+                        wires.get(wires.size() - 1).setMousePosition(p.getX(), mousePosition.getY());
+                    } else {
+                        wires.get(wires.size() - 1).setMousePosition(mousePosition.getX(), p.getY());
+                    }
+                }
+
+            }
+            if (chips.size() != 0 && isChipDrawing) {
+                chips.get(chips.size() - 1).setPosition(new Point(mousePosition.getX(), mousePosition.getY()));
+            }
+        };
+    }
+
+    @NotNull
+    private ListChangeListener<? super OutputPin> handleChangeInOutputPins() {
+        return change -> {
+            for (var pin : outputPins)
+                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            for (var pin : outputPins)
+                pin.draw(canvas.getDrawable());
+
+            outputPins.forEach(this::showContextMenuOnPinClick);
+        };
+    }
+
+    @NotNull
+    private ListChangeListener<? super InputPin> handleChangeInInputPins() {
+        return change -> {
+            for (var pin : inputPins)
+                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            for (var pin : inputPins)
+                pin.draw(canvas.getDrawable());
+
+            inputPins.forEach(this::showContextMenuOnPinClick);
+        };
+    }
+
+    @NotNull
+    private ListChangeListener<? super Chip> handleChangeInChips() {
+        return change -> {
             ObservableList<Node> children = canvas.getDrawable().getChildren();
             children.removeIf(child -> child instanceof AnchorPane);
             chips.forEach(chip -> chip.draw(canvas));
@@ -496,27 +921,7 @@ public class Main extends Application {
                 chip.getPane().setOnContextMenuRequested(event -> contextMenu.show(chip.getPane(), event.getScreenX(), event.getScreenY()));
                 deleteMenuItem.setOnAction(event -> deleteChip(chip));
             });
-        });
-
-        inputPins.addListener((ListChangeListener<? super InputPin>) change -> {
-            for (var pin : inputPins)
-                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
-            for (var pin : inputPins)
-                pin.draw(canvas.getDrawable());
-
-            inputPins.forEach(this::showContextMenuOnPinClick);
-        });
-        outputPins.addListener((ListChangeListener<? super OutputPin>) change -> {
-            for (var pin : outputPins)
-                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
-            for (var pin : outputPins)
-                pin.draw(canvas.getDrawable());
-
-            outputPins.forEach(this::showContextMenuOnPinClick);
-        });
-
-        scene.setFill(Colors.backgroundColor);
-        setStageScene(scene);
+        };
     }
 
     private void setStageScene(Scene scene) {
@@ -524,6 +929,7 @@ public class Main extends Application {
         mainStage.setFullScreen(false);
         mainStage.setFullScreen(true);
     }
+
     private Point getLastPointPositionOfWire() {
         Wire last = wires.get(wires.size() - 1);
         double x = 0, y = 0;
@@ -551,6 +957,7 @@ public class Main extends Application {
 
         return new Point(x, y);
     }
+
     private void showContextMenuOnPinClick(InputPin pin) {
         Node node = pin.getPane();
 
@@ -565,12 +972,13 @@ public class Main extends Application {
             canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
             inputPins.remove(pin);
         });
-        contextMenu.getItems().addAll( new CustomMenuItem(textField), new SeparatorMenuItem(),deleteMenuItem);
+        contextMenu.getItems().addAll(new CustomMenuItem(textField), new SeparatorMenuItem(), deleteMenuItem);
         node.setOnContextMenuRequested(event -> {
             textField.setText(pin.getName());
             contextMenu.show(node, event.getScreenX(), event.getScreenY());
         });
     }
+
     @NotNull
     private TextField makeTextField(Object pin, ContextMenu contextMenu) {
         TextField textField = new TextField();
@@ -594,6 +1002,7 @@ public class Main extends Application {
         });
         return textField;
     }
+
     private void showContextMenuOnPinClick(OutputPin pin) {
         Node node = pin.getPane();
 
@@ -601,7 +1010,7 @@ public class Main extends Application {
         TextField textField = makeTextField(pin, contextMenu);
 
         MenuItem deleteMenuItem = new MenuItem("Delete");
-        contextMenu.getItems().addAll( new CustomMenuItem(textField), new SeparatorMenuItem(),deleteMenuItem);
+        contextMenu.getItems().addAll(new CustomMenuItem(textField), new SeparatorMenuItem(), deleteMenuItem);
         node.setOnContextMenuRequested(event -> {
             textField.setText(pin.getName());
             contextMenu.show(node, event.getScreenX(), event.getScreenY());
@@ -614,33 +1023,37 @@ public class Main extends Application {
             outputPins.remove(pin);
         });
     }
+
     private void removeAllConnectedWiresToPin(InputPin pin) {
         List<Wire> toBeRemoved = new ArrayList<>();
-        for(Wire wire : wires) {
+        for (Wire wire : wires) {
             if (wire.getInputPin() == pin)
                 toBeRemoved.add(wire);
         }
         deleteWires(toBeRemoved);
     }
+
     private void removeAllConnectedWiresToPin(OutputPin pin) {
         List<Wire> toBeRemoved = new ArrayList<>();
-        for(Wire wire : wires) {
+        for (Wire wire : wires) {
             if (wire.getOutputPin() == pin)
                 toBeRemoved.add(wire);
         }
         deleteWires(toBeRemoved);
     }
+
     private void deleteWires(List<Wire> toBeRemoved) {
-        for(var wire : toBeRemoved)
+        for (var wire : toBeRemoved)
             wire.removeListeners();
         wires.removeAll(toBeRemoved);
     }
+
     private void deleteChip(Chip chip) {
         chips.remove(chip);
         chip.removeAllListeners();
 
         List<Wire> wiresToBeRemoved = new ArrayList<>();
-        for(Wire wire : wires) {
+        for (Wire wire : wires) {
             InputChipPin input = wire.getOutputToChip();
             OutputChipPin output = wire.getInputFromChip();
             if (chip.getInputPins().stream().anyMatch(pin -> pin == input)) {
@@ -652,6 +1065,7 @@ public class Main extends Application {
         }
         deleteWires(wiresToBeRemoved);
     }
+
     private void handleOutputChipPinClicked(OutputChipPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
 
@@ -668,6 +1082,7 @@ public class Main extends Application {
             wires.add(new Wire(pin));
         }
     }
+
     private void handleInputPinClicked(InputPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
 
@@ -684,6 +1099,7 @@ public class Main extends Application {
             wires.add(new Wire(pin));
         }
     }
+
     private void handleInputChipPinClicked(InputChipPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
 
@@ -700,6 +1116,7 @@ public class Main extends Application {
             wires.add(new Wire(pin));
         }
     }
+
     private void handleOutputPinClicked(OutputPin pin, MouseEvent e) {
         if (e.getButton() != MouseButton.PRIMARY) return;
 
@@ -716,28 +1133,24 @@ public class Main extends Application {
             wires.add(new Wire(pin));
         }
     }
-    @NotNull
-    private static VBox createRoot() {
-        VBox root = new VBox();
-        root.setBackground(Background.fill(Colors.backgroundColor));
-        root.setFillWidth(true);
-        root.setSpacing(0);
-        return root;
-    }
+
     private void addStyleSheet(Scene scene, String filename) {
         URL stylesheetURLCanBeNull = getClass().getClassLoader().getResource(filename);
         String stylesheet = Objects.requireNonNull(stylesheetURLCanBeNull).toExternalForm();
         scene.getStylesheets().clear();
         scene.getStylesheets().add(stylesheet);
     }
+
     @NotNull
     private EventHandler<MouseEvent> addNewOutputTerminal() {
         return e -> outputPins.add(new OutputPin(e.getSceneY() - TerminalConstants.height / 2));
     }
+
     @NotNull
     private EventHandler<MouseEvent> addNewInputTerminal() {
         return e -> inputPins.add(new InputPin(e.getSceneY() - TerminalConstants.height / 2));
     }
+
     public Rectangle makeRectangle(double x, double y, double width, double height, Color color) {
         Rectangle rect = new Rectangle();
         rect.setX(x);
