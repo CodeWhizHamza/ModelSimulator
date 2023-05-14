@@ -19,5 +19,6 @@
   "maxTime": 75,
   "previousScore": 0,
   "isLocked": true,
-  "hint": "cascade half subtractors"
+  "hint": "cascade half subtractors",
+  "description": "A full subtractor is a combinational circuit that performs subtraction of two bits, taking into account a borrow bit from a previous stage. It has three inputs: minuend (A), subtrahend (B), and borrow-in (BIN), and two outputs: difference (D) and borrow-out (BOUT).\n\nThe operation of a full subtractor can be described as follows:\n\nThe two input bits A and B are compared to determine the difference between them.\nIf A is greater than or equal to B, the difference is simply A - B, and the borrow-out is set to 0.\nIf A is less than B, the difference is obtained by adding 2 to the value of A (since we are working with binary numbers), and then subtracting B. In this case, the borrow-out is set to 1, indicating that a borrow will be required from the next stage.\nFinally, if there is a borrow-in from the previous stage, it is also subtracted from the difference.\nThe logic diagram for a full subtractor typically consists of two half-subtractor circuits and an additional OR gate to handle the borrow-in."
 }

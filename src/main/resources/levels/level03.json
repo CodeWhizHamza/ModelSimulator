@@ -15,5 +15,6 @@
   "maxTime": 30,
   "previousScore": 0,
   "isLocked": true,
-  "hint": "2 NOTs and 1 AND"
+  "hint": "2 NOTs and 1 AND",
+  "description": "A NOR gate can be constructed using NOT and AND gates by following these steps:\n\n* Take two inputs, A and B, and pass them to two separate NOT gates to invert their values. The output of each NOT gate will be the inverse of the input.\n* Pass the inverted inputs A' and B' to two separate AND gates. The output of each AND gate will be 1 only if both of its inputs are 1, otherwise it will be 0.\n* Pass the outputs of the AND gates to a final OR gate. The output of the OR gate will be 0 only if both of its inputs are 0, otherwise it will be 1.\n\nThe resulting circuit will behave like a NOR gate, where the output will be 0 only if both inputs are 1, otherwise it will be 1."
 }

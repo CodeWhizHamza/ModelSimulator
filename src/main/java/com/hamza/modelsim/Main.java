@@ -4,6 +4,8 @@ import com.hamza.modelsim.abstractcomponents.*;
 import com.hamza.modelsim.components.*;
 import com.hamza.modelsim.components.MenuBar;
 import com.hamza.modelsim.constants.*;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.collections.*;
 import javafx.event.Event;
@@ -20,6 +22,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
 import javafx.scene.text.Text;
 import javafx.stage.*;
+import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import com.google.gson.Gson;
 
@@ -175,7 +178,28 @@ public class Main extends Application {
             name.getStyleClass().add("box-label");
 
             if (level.isLocked) {
-                box.getChildren().add(new ImageView(lock));
+                ImageView image = new ImageView(lock);
+                box.getChildren().add(image);
+
+                box.setOnMouseClicked(mouseEvent -> {
+                    if (mouseEvent.getButton() != MouseButton.PRIMARY) return;
+
+                    Timeline animation = new Timeline();
+                    animation.setCycleCount(1);
+                    double rotation = 8;
+                    animation.getKeyFrames().addAll(
+                        new KeyFrame(Duration.ZERO, e -> image.setStyle("-fx-rotate: 0deg")),
+                        new KeyFrame(Duration.millis(62), e -> image.setStyle("-fx-rotate: " + rotation + "deg")),
+                        new KeyFrame(Duration.millis(62 * 2), e -> image.setStyle("-fx-rotate: 0deg")),
+                        new KeyFrame(Duration.millis(62 * 3), e -> image.setStyle("-fx-rotate: -" + rotation + "deg")),
+                        new KeyFrame(Duration.millis(62 * 4), e -> image.setStyle("-fx-rotate: 0deg")),
+                        new KeyFrame(Duration.millis(62 * 5), e -> image.setStyle("-fx-rotate: " + rotation + "deg")),
+                        new KeyFrame(Duration.millis(62 * 6), e -> image.setStyle("-fx-rotate: 0deg")),
+                        new KeyFrame(Duration.millis(62 * 7), e -> image.setStyle("-fx-rotate: -" + rotation + "deg")),
+                        new KeyFrame(Duration.millis(62 * 8), e -> image.setStyle("-fx-rotate: 0deg"))
+                    );
+                    animation.play();
+                });
             } else {
                 HBox stars = new HBox();
                 stars.setSpacing(36);
@@ -199,10 +223,8 @@ public class Main extends Application {
         return boxes;
     }
     private void loadLevels() {
-        List<File> levelsFiles = new ArrayList<>(getFiles("src/main/resources/levels"));
+        List<File> levelsFiles = new ArrayList<>(getFiles());
         levelsFiles.sort(Comparator.comparing(File::getName));
-
-        System.out.println(levelsFiles);
 
         Gson gson = new Gson();
         for (File level : levelsFiles) {
@@ -216,8 +238,8 @@ public class Main extends Application {
     private String getLevelString(String fileName) {
         return "src/main/resources/levels/" + fileName;
     }
-    private List<File> getFiles(String directoryPath) {
-        File directory = new File(directoryPath);
+    private List<File> getFiles() {
+        File directory = new File("src/main/resources/levels");
         return List.of(Objects.requireNonNull(directory.listFiles()));
     }
 

@@ -17,5 +17,6 @@
   "maxTime": 60,
   "previousScore": 0,
   "isLocked": true,
-  "hint": "XOR's implementation can be used"
+  "hint": "XOR's implementation can be used",
+  "description": "A half-adder is a digital circuit used to add two single-bit binary numbers (represented as A and B) together. It has two outputs: the sum (represented as S) and the carry (represented as C).\n\nThe half-adder circuit has two inputs (A and B) which are XOR-ed together to produce the sum output (S). The same two inputs (A and B) are also AND-ed together to produce the carry output (C).\nThe half-adder is a basic building block for more complex arithmetic circuits, such as full adders, which can add multi-bit binary numbers."
 }

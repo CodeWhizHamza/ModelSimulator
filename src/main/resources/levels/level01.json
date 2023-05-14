@@ -13,7 +13,8 @@
   },
   "maxGates": 2,
   "maxTime": 30,
-  "previousScore": 1,
+  "previousScore": 0,
   "isLocked": false,
-  "hint": "use 1 AND and 1 NOT"
+  "hint": "use 1 AND and 1 NOT",
+  "description": "A NAND (not-and) gate is a logic gate that produces an output that is the negation of the AND operation. It can be constructed using a combination of a NOT gate and an AND gate.\n\nThe NOT gate produces an output that is the opposite of its input, so if the input is a 0 (false), the output is a 1 (true), and vice versa. The AND gate, on the other hand, produces an output that is 1 only if both of its inputs are 1. Otherwise, the output is 0.\n\nTo construct a NAND gate using a NOT gate and an AND gate, you would take the output of the AND gate and pass it through the NOT gate. This produces an output that is the negation of the AND operation, and is equivalent to the output of a NAND gate.\n\nSymbolically, a NAND gate is represented by a triangle with a curved line on the left side, and its logical expression is: Q = NOT (A AND B), where A and B are the inputs, and Q is the output."
 }

@@ -16,5 +16,6 @@
   "maxTime": 45,
   "previousScore": 0,
   "isLocked": true,
-  "hint": "2 NOTs, 2 ANDs, and 1 NOT"
+  "hint": "2 NOTs, 2 ANDs, and 1 NOT",
+  "description": "An XNOR gate, also known as an \"exclusive-NOR\" gate, is a logic gate that produces an output of 1 if its two binary inputs are equal, and an output of 0 if they are different. It can be constructed using an XOR gate, a NOT gate, and an AND gate.\n\nThe XOR gate takes two inputs and produces an output of 1 if the inputs are different, and 0 if they are the same. The NOT gate takes a single input and produces the opposite value as output. The AND gate takes two inputs and produces an output of 1 only if both inputs are 1, and 0 otherwise.\n\nTo construct an XNOR gate, the inputs are first fed into an XOR gate, which produces a 1 output if the inputs are the same, and a 0 output if they are different. The output of the XOR gate is then fed into a NOT gate, which inverts the output so that it is 1 if the inputs are different, and 0 if they are the same. Finally, the output of the NOT gate is fed into an AND gate along with the original inputs. The AND gate produces an output of 1 only if all inputs are 1, which occurs only if the original inputs were the same (i.e. both 0 or both 1).\n\nIn summary, an XNOR gate constructed with an XOR gate, a NOT gate, and an AND gate performs the logical function of determining whether its two binary inputs are equal, producing a 1 output if they are equal, and a 0 output if they are different."
 }
