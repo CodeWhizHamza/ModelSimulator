@@ -1,4 +1,5 @@
 {
+  "filename": "level12.json",
   "name": "4 to 16 decoder",
   "inputs": {
     "A": [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],

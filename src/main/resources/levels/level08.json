@@ -1,4 +1,5 @@
 {
+  "filename": "level08.json",
   "name": "Half subtractor",
   "inputs": {
     "A": [0, 0, 1, 1],

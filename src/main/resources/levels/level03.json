@@ -1,4 +1,5 @@
 {
+  "filename": "level03.json",
   "name": "NOR",
   "inputs": {
     "A": [0, 0, 1, 1],

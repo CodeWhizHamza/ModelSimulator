@@ -3,6 +3,7 @@ package com.hamza.modelsim.abstractcomponents;
 import java.util.HashMap;
 
 public class Level {
+    public String filename;
     public String name;
     public HashMap<String, Integer[]> inputs;
     public HashMap<String, Integer[]> outputs;

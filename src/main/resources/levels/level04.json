@@ -1,4 +1,5 @@
 {
+  "filename": "level04.json",
   "name": "XOR",
   "inputs": {
     "A": [0, 0, 1, 1],

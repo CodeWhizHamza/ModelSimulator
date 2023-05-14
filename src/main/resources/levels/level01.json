@@ -1,4 +1,5 @@
 {
+  "filename": "level01.json",
   "name": "NAND",
   "inputs": {
     "A": [0, 0, 1, 1],

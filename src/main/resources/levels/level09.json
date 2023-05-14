@@ -1,4 +1,5 @@
 {
+  "filename": "level09.json",
   "name": "Full subtractor",
   "inputs": {
     "A": [0, 0, 0, 0, 1, 1, 1, 1],

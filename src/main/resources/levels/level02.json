@@ -1,4 +1,5 @@
 {
+  "filename": "level02.json",
   "name": "OR",
   "inputs": {
     "A": [0, 0, 1, 1],
