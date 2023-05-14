@@ -18,6 +18,7 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Polygon;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import org.jetbrains.annotations.NotNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Scriptable;
@@ -68,7 +69,7 @@ public class Chip {
         chip.setLayoutX(this.position.get().getX());
         chip.setLayoutY(this.position.get().getY());
         chip.setMinWidth(ChipConstants.chipWidth);
-        chip.setBackground(Background.fill(Colors.chipColor));
+        chip.setStyle("-fx-background-radius: 4px; -fx-background-color: #" + Colors.chipColor.toString().substring(2));
 
         this.position.addListener(change -> {
             chip.setLayoutX(this.position.get().getX());
@@ -88,10 +89,11 @@ public class Chip {
 
         Text nameText = new Text(name);
         nameText.setFill(Colors.white);
+        nameText.setTextAlignment(TextAlignment.CENTER);
         nameText.setFont(new Font("Arial", 18));
 
-        double width = nameText.getBoundsInLocal().getWidth() + 2 * (ChipConstants.chipPadding);
-        chip.setPrefWidth(Math.max(width, ChipConstants.chipWidth));
+        double width = Math.max(nameText.getBoundsInLocal().getWidth() + 2 * (ChipConstants.chipPadding), ChipConstants.chipWidth);
+        chip.setPrefWidth(width);
 
         nameText.setLayoutX(width / 2 - nameText.getBoundsInLocal().getWidth() / 2);
         nameText.setLayoutY(height / 2 + height / 12);
