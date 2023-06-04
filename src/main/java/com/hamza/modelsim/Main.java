@@ -74,6 +74,7 @@ public class Main extends Application {
     private static Image menu;
     private static Image retry;
     private static Image next;
+    private double timeRemaining = 0;
 
     public static void main(String[] args) {
         launch(args);
@@ -112,10 +113,10 @@ public class Main extends Application {
 
     public void addNewGate() {
         var background = new Pane();
-        background.setPrefWidth(1920);
         background.setPrefHeight(1080);
-        background.setLayoutX(0);
+        background.setPrefWidth(1920);
         background.setLayoutY(0);
+        background.setLayoutX(0);
         background.setBackground(Background.fill(Color.color(0.2, 0.2,0.2, .95)));
 
         var box = new VBox();
@@ -696,14 +697,10 @@ public class Main extends Application {
         System.out.println("menu called...");
         Button play = new Button("Play Game");
         Button gotoPlayground = new Button("Goto Playground");
-        Button optionsBtn = new Button("Options");
-        Button creditsBtn = new Button("Credits");
         Button quitBtn = new Button("Quit");
 
         play.setOnAction(e -> showLevelsScreen());
         gotoPlayground.setOnAction(e -> initPlayground(null));
-        optionsBtn.setOnAction(e -> showOptionsScreen());
-        creditsBtn.setOnAction(e -> showCreditsScreen());
         quitBtn.setOnAction(e -> System.exit(0));
 
         VBox root = createRoot();
@@ -715,7 +712,7 @@ public class Main extends Application {
         title.setFill(Colors.white);
         title.getStyleClass().add("my-text");
 
-        VBox menuBox = new VBox(play, gotoPlayground, optionsBtn, creditsBtn, quitBtn);
+        VBox menuBox = new VBox(play, gotoPlayground, quitBtn);
         menuBox.setAlignment(Pos.CENTER);
         menuBox.setSpacing(10);
 
@@ -770,12 +767,6 @@ public class Main extends Application {
         Scene scene = new Scene(root);
         addStyleSheet(scene, "levels.css");
         setStageScene(scene);
-    }
-
-    private void showOptionsScreen() {
-    }
-
-    private void showCreditsScreen() {
     }
 
     private List<VBox> generateLevelBoxes() {
@@ -967,6 +958,8 @@ public class Main extends Application {
             canvas.add(truthTableButton);
 
         truthTableButton.setOnAction(e -> {
+            if (level == null) return;
+
             Popup popup = new Popup();
             VBox popupContent = new VBox();
             popupContent.setPrefWidth(500);
@@ -1040,6 +1033,7 @@ public class Main extends Application {
         3. Truth table matches.
          */
         testCircuitButton.setOnAction(e -> {
+            if (level == null) return;
             HashMap<String, Boolean> testResults = new HashMap<>();
 
             testResults.put("inputs matches", level.inputs.size() == inputPins.size());
@@ -1086,13 +1080,23 @@ public class Main extends Application {
                         levels.get(nextIndex).isLocked = false;
                     saveLevels();
 
-                    Popup popup = new Popup();
-                    VBox popupContent = new VBox();
-                    popupContent.setPrefWidth(500);
-                    popupContent.setPrefHeight(500);
-                    popupContent.setSpacing(50);
-                    popupContent.setAlignment(Pos.CENTER);
-                    popupContent.setStyle("-fx-background-color: #444; -fx-padding: 24px;");
+                    var background = new Pane();
+                    background.setPrefWidth(1920);
+                    background.setPrefHeight(1080);
+                    background.setBackground(Background.fill(Color.color(0.2, 0.2,0.2, .95)));
+                    background.setLayoutX(0);
+                    background.setLayoutY(0);
+
+                    var box = new VBox();
+                    box.setBackground(Background.fill(Color.rgb(30, 30, 30)));
+                    box.setPrefWidth(800);
+                    box.setPrefHeight(700);
+
+                    box.setLayoutX(300);
+                    box.setLayoutY(60);
+                    box.setSpacing(50);
+                    box.setAlignment(Pos.CENTER);
+                    box.setStyle("-fx-padding: 20px 60px;");
 
                     Text titleLabel = new Text("You Won");
                     titleLabel.setFill(Colors.white);
@@ -1124,38 +1128,54 @@ public class Main extends Application {
 
                     Button menuButton = new Button();
                     menuButton.setGraphic(new ImageView(menu));
-                    menuButton.setOnAction(event -> {
-                        popup.hide();
-                        showLevelsScreen();
-                    });
+                    menuButton.setOnAction(event -> showLevelsScreen());
 
                     Button retryButton = new Button();
                     retryButton.setGraphic(new ImageView(retry));
-                    retryButton.setOnAction(event -> {
-                        popup.hide();
-                        initPlayground(level);
-                    });
+                    retryButton.setOnAction(event -> initPlayground(level));
 
                     Button nextButton = new Button();
                     nextButton.setGraphic(new ImageView(next));
-                    nextButton.setOnAction(event -> {
-                        popup.hide();
-                        initPlayground(levels.get(nextIndex));
-                    });
+                    nextButton.setOnAction(event -> initPlayground(levels.get(nextIndex)));
 
                     buttons.getChildren().addAll(menuButton, retryButton);
                     if (nextIndex != levels.size())
                         buttons.getChildren().add(nextButton);
 
-                    popupContent.getChildren().addAll(titleLabel, starsContainer, improvements, buttons);
-                    popup.getContent().add(popupContent);
-                    popup.setAutoHide(true);
-                    popup.show(mainStage);
+                    box.getChildren().addAll(titleLabel, starsContainer, improvements, buttons);
+                    background.getChildren().add(box);
+                    playgroundCanvas.add(background);
                 }));
                 tl.play();
             });
 
         });
+
+
+        /*
+        Show time remaining for best things.
+         */
+        if (level != null) {
+            timeRemaining = level.maxTime;
+            var timeLabel = new Text("Best Time remaining: " + timeRemaining);
+            timeLabel.setFill(Colors.white);
+            timeLabel.setStyle("-fx-font-family: Calibri; -fx-font-size: 20px;");
+            timeLabel.setLayoutY(20);
+            timeLabel.setLayoutX(150);
+            canvas.add(timeLabel);
+            Timeline timeTimeline = new Timeline();
+            timeTimeline.getKeyFrames().add(new KeyFrame(Duration.seconds(1), frameEvent -> {
+                if (timeRemaining < 1) return;
+                timeRemaining -= 1;
+                timeLabel.setText("Best Time remaining: " + timeRemaining);
+            }));
+            timeTimeline.setCycleCount(level.maxTime);
+            timeTimeline.play();
+        }
+
+
+
+
 
         inputPins.addListener((ListChangeListener<? super InputPin>) change -> inputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleInputPinClicked(pin, e))));
         outputPins.addListener((ListChangeListener<? super OutputPin>) change -> outputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleOutputPinClicked(pin, e))));
@@ -1283,9 +1303,7 @@ public class Main extends Application {
                 menuContainer.setWidth(300);
 
                 var gotoMainMenu = new MenuItem("Goto MainMenu");
-                gotoMainMenu.setOnAction(e -> {
-                    showStartMenu();
-                });
+                gotoMainMenu.setOnAction(e -> showStartMenu());
 
                 var resetMenuItem = new MenuItem("Reset");
                 resetMenuItem.setOnAction(e -> initPlayground(Main.currentLevel));
