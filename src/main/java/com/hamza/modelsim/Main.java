@@ -4,9 +4,9 @@ import com.google.gson.Gson;
 import com.hamza.modelsim.abstractcomponents.ChipLabel;
 import com.hamza.modelsim.abstractcomponents.Level;
 import com.hamza.modelsim.abstractcomponents.Point;
-import com.hamza.modelsim.components.MenuBar;
 import com.hamza.modelsim.components.*;
 import com.hamza.modelsim.constants.Colors;
+import com.hamza.modelsim.constants.LayoutConstants;
 import com.hamza.modelsim.constants.State;
 import com.hamza.modelsim.constants.TerminalConstants;
 import javafx.animation.KeyFrame;
@@ -39,6 +39,8 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Scriptable;
 
 import java.io.*;
 import java.net.URL;
@@ -53,23 +55,25 @@ public class Main extends Application {
     public static ObservableList<Chip> chips;
     public static ObservableList<ChipLabel> availableChips;
     public static Canvas canvas;
-    public Stage mainStage;
-    private boolean isWireDrawing;
-    private boolean isChipDrawing;
-    private boolean isShiftDown;
-    private Point mousePosition;
-    private List<Level> levels;
-    private long startTime;
-    private Image goldenStar;
-    private Image grayStar;
-    private Image lock;
-    private Image help;
-    private Image truthTable;
-    private Image check;
-    private Image cross;
-    private Image menu;
-    private Image retry;
-    private Image next;
+    public static Stage mainStage;
+    public static Level currentLevel;
+    public static Canvas playgroundCanvas;
+    private static boolean isWireDrawing;
+    private static boolean isChipDrawing;
+    private static boolean isShiftDown;
+    private static Point mousePosition;
+    private static List<Level> levels;
+    private static long startTime;
+    private static Image goldenStar;
+    private static Image grayStar;
+    private static Image lock;
+    private static Image help;
+    private static Image truthTable;
+    private static Image check;
+    private static Image cross;
+    private static Image menu;
+    private static Image retry;
+    private static Image next;
 
     public static void main(String[] args) {
         launch(args);
@@ -106,15 +110,568 @@ public class Main extends Application {
         return root;
     }
 
+    public void addNewGate() {
+        var background = new Pane();
+        background.setPrefWidth(1920);
+        background.setPrefHeight(1080);
+        background.setLayoutX(0);
+        background.setLayoutY(0);
+        background.setBackground(Background.fill(Color.color(0.2, 0.2,0.2, .95)));
+
+        var box = new VBox();
+        box.setBackground(Background.fill(Color.rgb(30, 30, 30)));
+        box.setPrefWidth(800);
+        box.setPrefHeight(700);
+
+        box.setLayoutX(300);
+        box.setLayoutY(60);
+        box.setAlignment(Pos.CENTER_LEFT);
+        box.setStyle("-fx-padding: 20px 60px;");
+
+        var title = new Text("Add new gate");
+        title.setFill(Colors.warmWhite);
+        title.setStyle("-fx-font-family: Calibri; -fx-font-size: 22px;");
+        box.getChildren().add(title);
+
+        // the text fields.
+        var nameLabel = new Text("Name:");
+        nameLabel.setFill(Colors.warmWhite);
+        nameLabel.setStyle("-fx-padding: 25px 0 0 0;");
+        var nameField = new TextField();
+
+        var functionsLabel = new Text("Functions:");
+        functionsLabel.setFill(Colors.warmWhite);
+        functionsLabel.setStyle("-fx-padding: 25px 0 0 0;");
+        ObservableList<TextField> functions = FXCollections.observableArrayList(new TextField());
+
+        var addFunction = new Button("+ add function");
+        addFunction.setOnAction(e -> functions.add(new TextField()));
+
+        var fieldsBox = new VBox();
+        fieldsBox.getChildren().addAll(nameLabel, nameField, functionsLabel);
+        fieldsBox.getChildren().addAll(functions);
+        fieldsBox.getChildren().add(addFunction);
+
+        box.getChildren().add(fieldsBox);
+
+
+        functions.addListener((ListChangeListener<? super TextField>) change -> {
+            fieldsBox.getChildren().clear();
+            fieldsBox.getChildren().addAll(nameLabel, nameField, functionsLabel);
+            fieldsBox.getChildren().addAll(functions);
+            fieldsBox.getChildren().add(addFunction);
+        });
+
+        var closeButton = new Button("Close");
+        var addButton = new Button("Add gate");
+
+        closeButton.setOnAction(e -> playgroundCanvas.getDrawable().getChildren().removeIf(child -> child == background));
+
+        addButton.setOnAction(e -> {
+            if (nameField.getCharacters().isEmpty()) {
+                nameLabel.setText("Name: *required (please enter name)");
+                return;
+            } else {
+                nameLabel.setText("Name: ");
+            }
+
+            var validFunctions = functions.stream().filter(f -> !f.getCharacters().isEmpty()).toList();
+            for(var f : validFunctions) System.out.println("Gate: " + f.getCharacters());
+            if (validFunctions.size() == 0) {
+                functionsLabel.setText("Functions: *required (please enter at least one function)");
+                return;
+            } else {
+                functionsLabel.setText("Functions: ");
+            }
+            for (var f : validFunctions) {
+                if (validateBooleanFunction(f.getCharacters().toString())) {
+                    System.out.println(f.getCharacters().toString() + " is valid.");
+                }
+            }
+            validFunctions = validFunctions.stream().filter(f -> validateBooleanFunction(f.getCharacters().toString())).toList();
+
+            if (validFunctions.size() < 1) {
+                functionsLabel.setText("Functions: *(please enter valid boolean function)");
+                return;
+            } else {
+                functionsLabel.setText("Functions:");
+            }
+
+            availableChips.add(new ChipLabel(nameField.getText(), validFunctions.stream().map(field -> field.getCharacters().toString()).toArray(String[]::new)));
+            playgroundCanvas.getDrawable().getChildren().removeIf(child -> child == background);
+
+        });
+
+        var buttons = new HBox();
+        buttons.getChildren().add(closeButton);
+        buttons.getChildren().add(addButton);
+        box.getChildren().add(buttons);
+
+        background.getChildren().add(box);
+        playgroundCanvas.add(background);
+    }
+
+    public boolean validateBooleanFunction(String function) {
+        int equalsIndex = function.indexOf("=");
+
+        if (equalsIndex < 0)
+            return false;
+
+        String functionName = function.substring(0, equalsIndex).trim();
+
+        if (functionName.equals(""))
+            return false;
+
+        if (function.length() < equalsIndex + 1)
+            return false;
+
+        Set<String> inputsSet = new HashSet<>();
+        String[] parts = function
+                .replaceAll("\\|", "OR")
+                .replaceAll("&", "AND")
+                .replaceAll("!", "NOT")
+                .substring(equalsIndex + 1)
+                .replaceAll("[()]", "")
+                .split("\\s*(AND|OR|NOT)\\s*");
+
+        for (String token : parts) {
+            if (!token.matches("(AND|OR|NOT)") && token.length() > 0) {
+                inputsSet.add(token);
+            }
+        }
+
+        var inputs = new ArrayList<>(inputsSet);
+        String expression = function.substring(equalsIndex + 1);
+        expression = expression
+                .substring(expression.indexOf("=") + 1)
+                .replaceAll("&", "&&")
+                .replaceAll("\\|", "||");
+
+        for(var input : inputs) {
+            expression = expression.replaceAll(input, "true");
+        }
+        System.out.println(expression);
+
+        Context context = Context.enter();
+        try {
+            Scriptable scope = context.initStandardObjects();
+            String testFunction = "function solveBooleanFunction() { return " + expression + "; }";
+            context.evaluateString(scope, testFunction, "BooleanFunction", 1, null);
+            Object solveFunction = scope.get("solveBooleanFunction", scope);
+            org.mozilla.javascript.Function javaFunction = (org.mozilla.javascript.Function) solveFunction;
+
+            javaFunction.call(context, scope, scope, new Object[]{});
+
+        } catch (Exception e) {
+            System.out.println("Exception raised in the function");
+            return false;
+        } finally {
+            Context.exit();
+        }
+
+        return true;
+    }
+
+    private static Popup showResultsPopup(ScrollPane scrollContainer, HashMap<String, Boolean> testResults) {
+        Popup popup = new Popup();
+        VBox popupContent = new VBox();
+        popupContent.setPrefWidth(500);
+        popupContent.setPrefHeight(500);
+        popupContent.setSpacing(16);
+        popupContent.setStyle("-fx-background-color: #444; -fx-padding: 24px;");
+
+        Text titleLabel = new Text(testResults.values().stream().filter(v -> v).count() + "/" + testResults.size() + " Passed");
+        titleLabel.setFill(Colors.white);
+        titleLabel.setStyle("-fx-font-family: Calibri; -fx-font-size: 32px; -fx-font-weight: bold;");
+
+        Button closeButton = new Button("× Close");
+        closeButton.setStyle("-fx-font-size: 16px; -fx-background-color: #333");
+        closeButton.setOnAction(event -> popup.hide());
+
+        VBox results = new VBox();
+        results.setSpacing(8);
+        results.setFillWidth(true);
+
+        for (var key : testResults.keySet().stream().sorted().toList()) {
+            Text testQuery = new Text(key);
+            testQuery.setFill(Colors.white);
+            testQuery.setWrappingWidth(400);
+            testQuery.setStyle("-fx-font-size: 18px; -fx-font-family: Calibri;");
+
+            ImageView image = new ImageView(testResults.get(key) ? check : cross);
+
+            HBox result = new HBox();
+            result.getChildren().add(image);
+            result.getChildren().add(testQuery);
+            result.setSpacing(8);
+            results.getChildren().add(result);
+        }
+
+        scrollContainer.setContent(popupContent);
+        scrollContainer.setStyle("-fx-background-color: #444;");
+        scrollContainer.setFitToHeight(true);
+        scrollContainer.setFitToWidth(true);
+        Platform.runLater(() -> scrollContainer.setVvalue(0));
+
+        popupContent.getChildren().addAll(titleLabel, results, closeButton);
+        popup.getContent().add(scrollContainer);
+        popup.setAutoHide(true);
+        popup.show(mainStage);
+
+        return popup;
+    }
+
+    private static void insertInputAndOutputPins(Level level) {
+        AtomicReference<Double> y = new AtomicReference<>((double) 60);
+        level.inputs.keySet().forEach(key -> {
+            InputPin pin = new InputPin(y.get());
+            pin.setName(key);
+            inputPins.add(pin);
+            y.updateAndGet(v -> v + TerminalConstants.height);
+        });
+
+        y.updateAndGet(v -> 16.0);
+        level.outputs.keySet().stream().sorted((s1, s2) -> {
+            int n1, n2;
+            try {
+                n1 = Integer.parseInt(s1);
+                n2 = Integer.parseInt(s2);
+            } catch (NumberFormatException e) {
+                return s1.compareTo(s2);
+            }
+            return Integer.compare(n1, n2);
+        }).forEach(key -> {
+            OutputPin pin = new OutputPin(y.get());
+            pin.setName(key);
+            outputPins.add(pin);
+            y.updateAndGet(v -> {
+                if (level.outputs.size() >= 14)
+                    return v + TerminalConstants.height - 18;
+                else
+                    return v + TerminalConstants.height;
+            });
+        });
+    }
+
+    @NotNull
+    private static EventHandler<MouseEvent> handleMouseMoved() {
+        return e -> {
+            mousePosition.setX(e.getSceneX());
+            mousePosition.setY(e.getSceneY());
+
+            if (wires.size() != 0 && isWireDrawing) {
+
+                if (!isShiftDown) {
+                    wires.get(wires.size() - 1).setMousePosition(
+                            new Point(mousePosition.getX(), mousePosition.getY())
+                    );
+                } else {
+                    Point p = getLastPointPositionOfWire();
+
+                    double absDiffX = Math.abs(mousePosition.getX() - p.getX());
+                    double absDiffY = Math.abs(mousePosition.getY() - p.getY());
+
+                    if (absDiffY > absDiffX) {
+                        wires.get(wires.size() - 1).setMousePosition(p.getX(), mousePosition.getY());
+                    } else {
+                        wires.get(wires.size() - 1).setMousePosition(mousePosition.getX(), p.getY());
+                    }
+                }
+
+            }
+            if (chips.size() != 0 && isChipDrawing) {
+                chips.get(chips.size() - 1).setPosition(new Point(mousePosition.getX(), mousePosition.getY()));
+            }
+        };
+    }
+
+    @NotNull
+    private static ListChangeListener<? super OutputPin> handleChangeInOutputPins() {
+        return change -> {
+            for (var pin : outputPins)
+                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            for (var pin : outputPins)
+                pin.draw(canvas.getDrawable());
+
+            outputPins.forEach(Main::showContextMenuOnPinClick);
+        };
+    }
+
+    @NotNull
+    private static ListChangeListener<? super InputPin> handleChangeInInputPins() {
+        return change -> {
+            for (var pin : inputPins)
+                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            for (var pin : inputPins)
+                pin.draw(canvas.getDrawable());
+
+            inputPins.forEach(Main::showContextMenuOnPinClick);
+        };
+    }
+
+    @NotNull
+    private static ListChangeListener<? super Chip> handleChangeInChips() {
+        return change -> {
+            ObservableList<Node> children = canvas.getDrawable().getChildren();
+            children.removeIf(child -> child instanceof AnchorPane);
+            chips.forEach(chip -> chip.draw(canvas));
+
+            chips.forEach(chip -> {
+                ContextMenu contextMenu = new ContextMenu();
+                MenuItem deleteMenuItem = new MenuItem("Delete");
+                contextMenu.getItems().add(deleteMenuItem);
+                chip.getPane().setOnContextMenuRequested(event -> contextMenu.show(chip.getPane(), event.getScreenX(), event.getScreenY()));
+                deleteMenuItem.setOnAction(event -> deleteChip(chip));
+            });
+        };
+    }
+
+    private static void setStageScene(Scene scene) {
+        mainStage.setScene(scene);
+        mainStage.setFullScreen(false);
+        mainStage.setFullScreen(true);
+    }
+
+    private static Point getLastPointPositionOfWire() {
+        Wire last = wires.get(wires.size() - 1);
+        double x = 0, y = 0;
+
+        if (last.getPoints().size() == 0) {
+
+            if (last.getSourcePin() instanceof InputPin) {
+                x = ((InputPin) last.getSourcePin()).getConnectionPoint().getX();
+                y = ((InputPin) last.getSourcePin()).getConnectionPoint().getY();
+            } else if (last.getSourcePin() instanceof OutputPin) {
+                x = ((OutputPin) last.getSourcePin()).getConnectionPoint().getX();
+                y = ((OutputPin) last.getSourcePin()).getConnectionPoint().getY();
+            } else if (last.getSourcePin() instanceof InputChipPin) {
+                x = ((InputChipPin) last.getSourcePin()).getConnectionPoint().getX();
+                y = ((InputChipPin) last.getSourcePin()).getConnectionPoint().getY();
+            } else if (last.getSourcePin() instanceof OutputChipPin) {
+                x = ((OutputChipPin) last.getSourcePin()).getConnectionPoint().getX();
+                y = ((OutputChipPin) last.getSourcePin()).getConnectionPoint().getY();
+            }
+
+        } else {
+            x = last.getPoints().get(last.getPoints().size() - 1).getX();
+            y = last.getPoints().get(last.getPoints().size() - 1).getY();
+        }
+
+        return new Point(x, y);
+    }
+
+    private static void showContextMenuOnPinClick(InputPin pin) {
+        Node node = pin.getPane();
+
+        ContextMenu contextMenu = new ContextMenu();
+        TextField textField = makeTextField(pin, contextMenu);
+
+        MenuItem deleteMenuItem = new MenuItem("Delete");
+        deleteMenuItem.setOnAction(event -> {
+            removeAllConnectedWiresToPin(pin);
+
+            // To remove it from view
+            canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            inputPins.remove(pin);
+        });
+        contextMenu.getItems().addAll(new CustomMenuItem(textField), new SeparatorMenuItem(), deleteMenuItem);
+        node.setOnContextMenuRequested(event -> {
+            textField.setText(pin.getName());
+            contextMenu.show(node, event.getScreenX(), event.getScreenY());
+        });
+    }
+
+    @NotNull
+    private static TextField makeTextField(Object pin, ContextMenu contextMenu) {
+        TextField textField = new TextField();
+        textField.requestFocus();
+
+        textField.setOnKeyReleased(e -> {
+            if (e.getCode() == KeyCode.SPACE) {
+                textField.setText(textField.getText().replaceAll("\\s", ""));
+                textField.positionCaret(textField.getLength());
+            }
+        });
+        // consume the event to prevent it from closing the context menu
+        textField.addEventFilter(MouseEvent.MOUSE_CLICKED, Event::consume);
+
+        textField.setOnAction(e -> {
+            if (pin instanceof InputPin)
+                ((InputPin) pin).setName(textField.getText());
+            else
+                ((OutputPin) pin).setName(textField.getText());
+            contextMenu.hide();
+        });
+        return textField;
+    }
+
+    private static void showContextMenuOnPinClick(OutputPin pin) {
+        Node node = pin.getPane();
+
+        ContextMenu contextMenu = new ContextMenu();
+        TextField textField = makeTextField(pin, contextMenu);
+
+        MenuItem deleteMenuItem = new MenuItem("Delete");
+        contextMenu.getItems().addAll(new CustomMenuItem(textField), new SeparatorMenuItem(), deleteMenuItem);
+        node.setOnContextMenuRequested(event -> {
+            textField.setText(pin.getName());
+            contextMenu.show(node, event.getScreenX(), event.getScreenY());
+        });
+        deleteMenuItem.setOnAction(event -> {
+            removeAllConnectedWiresToPin(pin);
+
+            // To remove it from view
+            canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
+            outputPins.remove(pin);
+        });
+    }
+
+    private static void removeAllConnectedWiresToPin(InputPin pin) {
+        List<Wire> toBeRemoved = new ArrayList<>();
+        for (Wire wire : wires) {
+            if (wire.getInputPin() == pin)
+                toBeRemoved.add(wire);
+        }
+        deleteWires(toBeRemoved);
+    }
+
+    private static void removeAllConnectedWiresToPin(OutputPin pin) {
+        List<Wire> toBeRemoved = new ArrayList<>();
+        for (Wire wire : wires) {
+            if (wire.getOutputPin() == pin)
+                toBeRemoved.add(wire);
+        }
+        deleteWires(toBeRemoved);
+    }
+
+    private static void deleteWires(List<Wire> toBeRemoved) {
+        for (var wire : toBeRemoved)
+            wire.removeListeners();
+        wires.removeAll(toBeRemoved);
+    }
+
+    private static void deleteChip(Chip chip) {
+        chips.remove(chip);
+        chip.removeAllListeners();
+
+        List<Wire> wiresToBeRemoved = new ArrayList<>();
+        for (Wire wire : wires) {
+            InputChipPin input = wire.getOutputToChip();
+            OutputChipPin output = wire.getInputFromChip();
+            if (chip.getInputPins().stream().anyMatch(pin -> pin == input)) {
+                wiresToBeRemoved.add(wire);
+            }
+            if (chip.getOutputPins() != null && chip.getOutputPins().stream().anyMatch(pin -> pin == output)) {
+                wiresToBeRemoved.add(wire);
+            }
+        }
+        deleteWires(wiresToBeRemoved);
+    }
+
+    private static void handleOutputChipPinClicked(OutputChipPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+
+            if (currentWire.getSourcePin() instanceof OutputChipPin) return;
+            if (currentWire.getSourcePin() instanceof InputPin) return;
+
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    private static void handleInputPinClicked(InputPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+
+            if (currentWire.getSourcePin() instanceof InputPin) return;
+            if (currentWire.getSourcePin() instanceof OutputChipPin) return;
+
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    private static void handleInputChipPinClicked(InputChipPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+
+            if (currentWire.getSourcePin() instanceof OutputPin) return;
+            if (currentWire.getSourcePin() instanceof InputChipPin) return;
+
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    private static void handleOutputPinClicked(OutputPin pin, MouseEvent e) {
+        if (e.getButton() != MouseButton.PRIMARY) return;
+
+        if (isWireDrawing) {
+            Wire currentWire = wires.get(wires.size() - 1);
+
+            if (currentWire.getSourcePin() instanceof InputChipPin) return;
+            if (currentWire.getSourcePin() instanceof OutputPin) return;
+
+            currentWire.setDestination(pin);
+            isWireDrawing = false;
+        } else {
+            isWireDrawing = true;
+            wires.add(new Wire(pin));
+        }
+    }
+
+    private static void addStyleSheet(Scene scene, String filename) {
+        URL stylesheetURLCanBeNull = Main.class.getClassLoader().getResource(filename);
+        String stylesheet = Objects.requireNonNull(stylesheetURLCanBeNull).toExternalForm();
+        scene.getStylesheets().clear();
+        scene.getStylesheets().add(stylesheet);
+    }
+
+    @NotNull
+    private static EventHandler<MouseEvent> addNewOutputTerminal() {
+        return e -> outputPins.add(new OutputPin(e.getSceneY() - TerminalConstants.height / 2));
+    }
+
+    @NotNull
+    private static EventHandler<MouseEvent> addNewInputTerminal() {
+        return e -> inputPins.add(new InputPin(e.getSceneY() - TerminalConstants.height / 2));
+    }
+
+    public static Rectangle makeRectangle(double x, double y, double width, double height, Color color) {
+        Rectangle rect = new Rectangle();
+        rect.setX(x);
+        rect.setY(y);
+        rect.setWidth(width);
+        rect.setHeight(height);
+        rect.setFill(color);
+        return rect;
+    }
+
     @Override
     public void start(Stage mainStage) {
-        this.mainStage = mainStage;
+        Main.mainStage = mainStage;
         mainStage.setTitle("Model simulator");
         mainStage.setFullScreen(true);
         mainStage.setFullScreenExitHint("");
         mainStage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
 
-        this.levels = new ArrayList<>();
+        levels = new ArrayList<>();
 
         try {
             goldenStar = new Image(new FileInputStream("src/main/resources/images/golden-star.png"));
@@ -135,13 +692,16 @@ public class Main extends Application {
         mainStage.show();
     }
 
-    private void showStartMenu() {
-        Button play = new Button("Play");
+    public void showStartMenu() {
+        System.out.println("menu called...");
+        Button play = new Button("Play Game");
+        Button gotoPlayground = new Button("Goto Playground");
         Button optionsBtn = new Button("Options");
         Button creditsBtn = new Button("Credits");
         Button quitBtn = new Button("Quit");
 
         play.setOnAction(e -> showLevelsScreen());
+        gotoPlayground.setOnAction(e -> initPlayground(null));
         optionsBtn.setOnAction(e -> showOptionsScreen());
         creditsBtn.setOnAction(e -> showCreditsScreen());
         quitBtn.setOnAction(e -> System.exit(0));
@@ -155,7 +715,7 @@ public class Main extends Application {
         title.setFill(Colors.white);
         title.getStyleClass().add("my-text");
 
-        VBox menuBox = new VBox(play, optionsBtn, creditsBtn, quitBtn);
+        VBox menuBox = new VBox(play, gotoPlayground, optionsBtn, creditsBtn, quitBtn);
         menuBox.setAlignment(Pos.CENTER);
         menuBox.setSpacing(10);
 
@@ -167,7 +727,7 @@ public class Main extends Application {
         setStageScene(scene);
     }
 
-    private void showLevelsScreen() {
+    public void showLevelsScreen() {
         loadLevels();
 
         VBox root = createRoot();
@@ -197,9 +757,6 @@ public class Main extends Application {
 
         for (var box : levelBoxes)
             levelsContainer.getChildren().add(box);
-
-
-//        TableView<>
 
         ScrollPane scrollContainer = new ScrollPane();
         scrollContainer.setContent(levelsContainer);
@@ -312,9 +869,8 @@ public class Main extends Application {
         return List.of(Objects.requireNonNull(directory.listFiles()));
     }
 
-    private void initPlayground(Level level) {
-        startTime = System.currentTimeMillis();
-
+    public void initPlayground(Level level) {
+        currentLevel = level;
         inputPins = FXCollections.observableArrayList();
         outputPins = FXCollections.observableArrayList();
         wires = FXCollections.observableArrayList();
@@ -325,16 +881,18 @@ public class Main extends Application {
         isChipDrawing = false;
         isShiftDown = false;
 
+        startTime = System.currentTimeMillis();
         mousePosition = new Point();
 
         VBox root = createRoot();
         Scene scene = new Scene(root);
         addStyleSheet(scene, "main.css");
         canvas = new Canvas();
-        MenuBar menuBar = new MenuBar(scene);
+
+        playgroundCanvas = canvas;
 
         // Show title on top of screen
-        Text title = new Text(level.name);
+        Text title = new Text(level == null ? "Playground" : level.name);
         title.setFont(new Font("Arial", 32));
         title.setFill(Colors.white);
         title.setStyle("-fx-text-fill: #ffffff; -fx-text-alignment: center; -fx-font-size: 32px;");
@@ -343,13 +901,15 @@ public class Main extends Application {
         canvas.add(title);
 
         // Hint
-        Text hint = new Text("Hint: " + level.hint);
-        hint.setFont(new Font("Arial", 16));
-        hint.setFill(Colors.warmWhite);
-        hint.setLayoutX(30);
-        hint.setLayoutY(canvas.getDrawable().getPrefHeight() - hint.getBoundsInLocal().getHeight() - 4);
-        canvas.add(hint);
-        hint.setVisible(false);
+        if (level != null) {
+            Text hint = new Text("Hint: " + level.hint);
+            hint.setFont(new Font("Arial", 16));
+            hint.setFill(Colors.warmWhite);
+            hint.setLayoutX(30);
+            hint.setLayoutY(canvas.getDrawable().getPrefHeight() - hint.getBoundsInLocal().getHeight() - 4);
+            canvas.add(hint);
+            hint.setVisible(false);
+        }
 
         // Truth table and help button
         Button helpButton = new Button();
@@ -357,11 +917,13 @@ public class Main extends Application {
         helpButton.setStyle("-fx-padding: 0");
         helpButton.setLayoutX(24);
         helpButton.setLayoutY(10);
-        canvas.add(helpButton);
+        if (level != null)
+            canvas.add(helpButton);
 
         ScrollPane scrollContainer = new ScrollPane();
         scrollContainer.getStyleClass().add("scroll-container");
         helpButton.setOnAction(e -> {
+
             Popup popup = new Popup();
             VBox popupContent = new VBox();
             popupContent.setPrefWidth(500);
@@ -377,7 +939,8 @@ public class Main extends Application {
             closeButton.setStyle("-fx-font-size: 16px; -fx-background-color: #333");
             closeButton.setOnAction(event -> popup.hide());
 
-            Text description = new Text(level.description);
+
+            Text description = new Text(level != null ? level.description : "");
             description.setFill(Colors.white);
             description.setWrappingWidth(440);
             description.setStyle("-fx-font-size: 18px; -fx-font-family: Calibri;");
@@ -400,7 +963,8 @@ public class Main extends Application {
         truthTableButton.setStyle("-fx-padding: 0");
         truthTableButton.setLayoutX(72);
         truthTableButton.setLayoutY(10);
-        canvas.add(truthTableButton);
+        if (level != null)
+            canvas.add(truthTableButton);
 
         truthTableButton.setOnAction(e -> {
             Popup popup = new Popup();
@@ -466,7 +1030,8 @@ public class Main extends Application {
         testCircuitButton.setStyle("-fx-background-color: #222; -fx-padding: 12px 24px");
         testCircuitButton.setLayoutY(canvas.getDrawable().getPrefHeight() - 50);
         testCircuitButton.setLayoutX(canvas.getDrawable().getPrefWidth() - 180);
-        canvas.add(testCircuitButton);
+        if (level != null)
+            canvas.add(testCircuitButton);
 
         /*
         ** TESTS
@@ -687,14 +1252,60 @@ public class Main extends Application {
         });
 
         root.getChildren().add(canvas.getDrawable());
-        root.getChildren().add(menuBar.getDrawable());
-        menuBar.getDrawable().getChildren().addListener((ListChangeListener<? super Node>) change -> {
-            root.getChildren().removeIf(node -> node == menuBar.getDrawable());
-            root.getChildren().add(menuBar.getDrawable());
+
+
+        HBox menuBarContainer = new HBox();
+        menuBarContainer.setAlignment(Pos.CENTER_LEFT);
+        menuBarContainer.setPrefWidth(Screen.getPrimary().getBounds().getWidth());
+        menuBarContainer.setPrefHeight(LayoutConstants.menuHeight);
+        menuBarContainer.setBackground(Background.fill(Colors.menusColor));
+
+        ObservableList<Button> buttons = FXCollections.observableArrayList();
+        menuBarContainer.getChildren().addAll(buttons);
+
+        buttons.addListener((ListChangeListener<? super Button>) change -> {
+            menuBarContainer.getChildren().clear();
+            menuBarContainer.getChildren().addAll(buttons);
+        });
+
+        root.getChildren().add(menuBarContainer);
+        menuBarContainer.getChildren().addListener((ListChangeListener<? super Node>) change -> {
+            root.getChildren().removeIf(node -> node == menuBarContainer);
+            root.getChildren().add(menuBarContainer);
         });
 
         availableChips.addListener((ListChangeListener<? super ChipLabel>) change -> {
-            menuBar.clearButtons();
+            buttons.clear();
+
+            Button menuButton = new Button("Menu");
+            menuButton.setOnAction(menuEvent -> {
+                ContextMenu menuContainer = new ContextMenu();
+                menuContainer.setWidth(300);
+
+                var gotoMainMenu = new MenuItem("Goto MainMenu");
+                gotoMainMenu.setOnAction(e -> {
+                    showStartMenu();
+                });
+
+                var resetMenuItem = new MenuItem("Reset");
+                resetMenuItem.setOnAction(e -> initPlayground(Main.currentLevel));
+
+                var addGateMenuItem = new MenuItem("Add Gate");
+                addGateMenuItem.setOnAction(e -> addNewGate());
+
+                var showLevelsMenuItem = new MenuItem("Goto Levels");
+                showLevelsMenuItem.setOnAction(e -> showLevelsScreen());
+
+                menuContainer.getItems().add(resetMenuItem);
+                if (level == null)
+                    menuContainer.getItems().add(addGateMenuItem);
+                else
+                    menuContainer.getItems().add(showLevelsMenuItem);
+                menuContainer.getItems().add(gotoMainMenu);
+                menuContainer.show(scene.getWindow(), 0, scene.getHeight() - 250);
+            });
+            buttons.add(menuButton);
+
             availableChips.forEach(chip -> {
                 Button button = new Button(chip.getName());
                 button.setOnAction(e -> {
@@ -705,20 +1316,27 @@ public class Main extends Application {
                     else
                         chips.add(new Chip(chip.getName(), position));
                 });
-                menuBar.addButton(button);
+                buttons.add(button);
             });
         });
 
         // Add available gates
-        for (String key : level.availableGates.keySet()) {
-            availableChips.add(new ChipLabel(key, level.availableGates.get(key)));
+        if (level != null) {
+            for (String key : level.availableGates.keySet()) {
+                availableChips.add(new ChipLabel(key, level.availableGates.get(key)));
+            }
+        } else {
+            availableChips.add(new ChipLabel("AND", "F=A&B"));
+            availableChips.add(new ChipLabel("OR", "F=A|B"));
+            availableChips.add(new ChipLabel("NOT", "F=!A"));
+            availableChips.add(new ChipLabel("7-Seg", ""));
         }
 
         double xPosition = 0;
         double yPosition = 8;
         double paddingY = yPosition * 2;
         double borderWidth = 20;
-        double borderHeight = Screen.getPrimary().getBounds().getHeight() - paddingY - menuBar.getHeight();
+        double borderHeight = Screen.getPrimary().getBounds().getHeight() - paddingY - LayoutConstants.menuHeight;
 
         Rectangle inputPinsBase = makeRectangle(
                 xPosition, yPosition,
@@ -746,7 +1364,8 @@ public class Main extends Application {
         inputPins.addListener(handleChangeInInputPins());
         outputPins.addListener(handleChangeInOutputPins());
 
-        insertInputAndOutputPins(level);
+        if (level != null)
+            insertInputAndOutputPins(level);
 
         scene.setFill(Colors.backgroundColor);
         setStageScene(scene);
@@ -768,396 +1387,5 @@ public class Main extends Application {
             }
         }
         loadLevels();
-    }
-
-    private Popup showResultsPopup(ScrollPane scrollContainer, HashMap<String, Boolean> testResults) {
-        Popup popup = new Popup();
-        VBox popupContent = new VBox();
-        popupContent.setPrefWidth(500);
-        popupContent.setPrefHeight(500);
-        popupContent.setSpacing(16);
-        popupContent.setStyle("-fx-background-color: #444; -fx-padding: 24px;");
-
-        Text titleLabel = new Text(testResults.values().stream().filter(v -> v).count() + "/" + testResults.size() + " Passed");
-        titleLabel.setFill(Colors.white);
-        titleLabel.setStyle("-fx-font-family: Calibri; -fx-font-size: 32px; -fx-font-weight: bold;");
-
-        Button closeButton = new Button("× Close");
-        closeButton.setStyle("-fx-font-size: 16px; -fx-background-color: #333");
-        closeButton.setOnAction(event -> popup.hide());
-
-        VBox results = new VBox();
-        results.setSpacing(8);
-        results.setFillWidth(true);
-
-        for (var key : testResults.keySet().stream().sorted().toList()) {
-            Text testQuery = new Text(key);
-            testQuery.setFill(Colors.white);
-            testQuery.setWrappingWidth(400);
-            testQuery.setStyle("-fx-font-size: 18px; -fx-font-family: Calibri;");
-
-            ImageView image = new ImageView(testResults.get(key) ? check : cross);
-
-            HBox result = new HBox();
-            result.getChildren().add(image);
-            result.getChildren().add(testQuery);
-            result.setSpacing(8);
-            results.getChildren().add(result);
-        }
-
-        scrollContainer.setContent(popupContent);
-        scrollContainer.setStyle("-fx-background-color: #444;");
-        scrollContainer.setFitToHeight(true);
-        scrollContainer.setFitToWidth(true);
-        Platform.runLater(() -> scrollContainer.setVvalue(0));
-
-        popupContent.getChildren().addAll(titleLabel, results, closeButton);
-        popup.getContent().add(scrollContainer);
-        popup.setAutoHide(true);
-        popup.show(mainStage);
-
-        return popup;
-    }
-
-    private void insertInputAndOutputPins(Level level) {
-        AtomicReference<Double> y = new AtomicReference<>((double) 60);
-        level.inputs.keySet().forEach(key -> {
-            InputPin pin = new InputPin(y.get());
-            pin.setName(key);
-            inputPins.add(pin);
-            y.updateAndGet(v -> v + TerminalConstants.height);
-        });
-
-        y.updateAndGet(v -> 16.0);
-        level.outputs.keySet().stream().sorted((s1, s2) -> {
-            int n1, n2;
-            try {
-                n1 = Integer.parseInt(s1);
-                n2 = Integer.parseInt(s2);
-            } catch (NumberFormatException e) {
-                return s1.compareTo(s2);
-            }
-            return Integer.compare(n1, n2);
-        }).forEach(key -> {
-            OutputPin pin = new OutputPin(y.get());
-            pin.setName(key);
-            outputPins.add(pin);
-            y.updateAndGet(v -> {
-                if (level.outputs.size() >= 14)
-                    return v + TerminalConstants.height - 18;
-                else
-                    return v + TerminalConstants.height;
-            });
-        });
-    }
-
-    @NotNull
-    private EventHandler<MouseEvent> handleMouseMoved() {
-        return e -> {
-            mousePosition.setX(e.getSceneX());
-            mousePosition.setY(e.getSceneY());
-
-            if (wires.size() != 0 && isWireDrawing) {
-
-                if (!isShiftDown) {
-                    wires.get(wires.size() - 1).setMousePosition(
-                            new Point(mousePosition.getX(), mousePosition.getY())
-                    );
-                } else {
-                    Point p = getLastPointPositionOfWire();
-
-                    double absDiffX = Math.abs(mousePosition.getX() - p.getX());
-                    double absDiffY = Math.abs(mousePosition.getY() - p.getY());
-
-                    if (absDiffY > absDiffX) {
-                        wires.get(wires.size() - 1).setMousePosition(p.getX(), mousePosition.getY());
-                    } else {
-                        wires.get(wires.size() - 1).setMousePosition(mousePosition.getX(), p.getY());
-                    }
-                }
-
-            }
-            if (chips.size() != 0 && isChipDrawing) {
-                chips.get(chips.size() - 1).setPosition(new Point(mousePosition.getX(), mousePosition.getY()));
-            }
-        };
-    }
-
-    @NotNull
-    private ListChangeListener<? super OutputPin> handleChangeInOutputPins() {
-        return change -> {
-            for (var pin : outputPins)
-                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
-            for (var pin : outputPins)
-                pin.draw(canvas.getDrawable());
-
-            outputPins.forEach(this::showContextMenuOnPinClick);
-        };
-    }
-
-    @NotNull
-    private ListChangeListener<? super InputPin> handleChangeInInputPins() {
-        return change -> {
-            for (var pin : inputPins)
-                canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
-            for (var pin : inputPins)
-                pin.draw(canvas.getDrawable());
-
-            inputPins.forEach(this::showContextMenuOnPinClick);
-        };
-    }
-
-    @NotNull
-    private ListChangeListener<? super Chip> handleChangeInChips() {
-        return change -> {
-            ObservableList<Node> children = canvas.getDrawable().getChildren();
-            children.removeIf(child -> child instanceof AnchorPane);
-            chips.forEach(chip -> chip.draw(canvas));
-
-            chips.forEach(chip -> {
-                ContextMenu contextMenu = new ContextMenu();
-                MenuItem deleteMenuItem = new MenuItem("Delete");
-                contextMenu.getItems().add(deleteMenuItem);
-                chip.getPane().setOnContextMenuRequested(event -> contextMenu.show(chip.getPane(), event.getScreenX(), event.getScreenY()));
-                deleteMenuItem.setOnAction(event -> deleteChip(chip));
-            });
-        };
-    }
-
-    private void setStageScene(Scene scene) {
-        mainStage.setScene(scene);
-        mainStage.setFullScreen(false);
-        mainStage.setFullScreen(true);
-    }
-
-    private Point getLastPointPositionOfWire() {
-        Wire last = wires.get(wires.size() - 1);
-        double x = 0, y = 0;
-
-        if (last.getPoints().size() == 0) {
-
-            if (last.getSourcePin() instanceof InputPin) {
-                x = ((InputPin) last.getSourcePin()).getConnectionPoint().getX();
-                y = ((InputPin) last.getSourcePin()).getConnectionPoint().getY();
-            } else if (last.getSourcePin() instanceof OutputPin) {
-                x = ((OutputPin) last.getSourcePin()).getConnectionPoint().getX();
-                y = ((OutputPin) last.getSourcePin()).getConnectionPoint().getY();
-            } else if (last.getSourcePin() instanceof InputChipPin) {
-                x = ((InputChipPin) last.getSourcePin()).getConnectionPoint().getX();
-                y = ((InputChipPin) last.getSourcePin()).getConnectionPoint().getY();
-            } else if (last.getSourcePin() instanceof OutputChipPin) {
-                x = ((OutputChipPin) last.getSourcePin()).getConnectionPoint().getX();
-                y = ((OutputChipPin) last.getSourcePin()).getConnectionPoint().getY();
-            }
-
-        } else {
-            x = last.getPoints().get(last.getPoints().size() - 1).getX();
-            y = last.getPoints().get(last.getPoints().size() - 1).getY();
-        }
-
-        return new Point(x, y);
-    }
-
-    private void showContextMenuOnPinClick(InputPin pin) {
-        Node node = pin.getPane();
-
-        ContextMenu contextMenu = new ContextMenu();
-        TextField textField = makeTextField(pin, contextMenu);
-
-        MenuItem deleteMenuItem = new MenuItem("Delete");
-        deleteMenuItem.setOnAction(event -> {
-            removeAllConnectedWiresToPin(pin);
-
-            // To remove it from view
-            canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
-            inputPins.remove(pin);
-        });
-        contextMenu.getItems().addAll(new CustomMenuItem(textField), new SeparatorMenuItem(), deleteMenuItem);
-        node.setOnContextMenuRequested(event -> {
-            textField.setText(pin.getName());
-            contextMenu.show(node, event.getScreenX(), event.getScreenY());
-        });
-    }
-
-    @NotNull
-    private TextField makeTextField(Object pin, ContextMenu contextMenu) {
-        TextField textField = new TextField();
-        textField.requestFocus();
-
-        textField.setOnKeyReleased(e -> {
-            if (e.getCode() == KeyCode.SPACE) {
-                textField.setText(textField.getText().replaceAll("\\s", ""));
-                textField.positionCaret(textField.getLength());
-            }
-        });
-        // consume the event to prevent it from closing the context menu
-        textField.addEventFilter(MouseEvent.MOUSE_CLICKED, Event::consume);
-
-        textField.setOnAction(e -> {
-            if (pin instanceof InputPin)
-                ((InputPin) pin).setName(textField.getText());
-            else
-                ((OutputPin) pin).setName(textField.getText());
-            contextMenu.hide();
-        });
-        return textField;
-    }
-
-    private void showContextMenuOnPinClick(OutputPin pin) {
-        Node node = pin.getPane();
-
-        ContextMenu contextMenu = new ContextMenu();
-        TextField textField = makeTextField(pin, contextMenu);
-
-        MenuItem deleteMenuItem = new MenuItem("Delete");
-        contextMenu.getItems().addAll(new CustomMenuItem(textField), new SeparatorMenuItem(), deleteMenuItem);
-        node.setOnContextMenuRequested(event -> {
-            textField.setText(pin.getName());
-            contextMenu.show(node, event.getScreenX(), event.getScreenY());
-        });
-        deleteMenuItem.setOnAction(event -> {
-            removeAllConnectedWiresToPin(pin);
-
-            // To remove it from view
-            canvas.getDrawable().getChildren().removeIf(pin.getDrawable()::equals);
-            outputPins.remove(pin);
-        });
-    }
-
-    private void removeAllConnectedWiresToPin(InputPin pin) {
-        List<Wire> toBeRemoved = new ArrayList<>();
-        for (Wire wire : wires) {
-            if (wire.getInputPin() == pin)
-                toBeRemoved.add(wire);
-        }
-        deleteWires(toBeRemoved);
-    }
-
-    private void removeAllConnectedWiresToPin(OutputPin pin) {
-        List<Wire> toBeRemoved = new ArrayList<>();
-        for (Wire wire : wires) {
-            if (wire.getOutputPin() == pin)
-                toBeRemoved.add(wire);
-        }
-        deleteWires(toBeRemoved);
-    }
-
-    private void deleteWires(List<Wire> toBeRemoved) {
-        for (var wire : toBeRemoved)
-            wire.removeListeners();
-        wires.removeAll(toBeRemoved);
-    }
-
-    private void deleteChip(Chip chip) {
-        chips.remove(chip);
-        chip.removeAllListeners();
-
-        List<Wire> wiresToBeRemoved = new ArrayList<>();
-        for (Wire wire : wires) {
-            InputChipPin input = wire.getOutputToChip();
-            OutputChipPin output = wire.getInputFromChip();
-            if (chip.getInputPins().stream().anyMatch(pin -> pin == input)) {
-                wiresToBeRemoved.add(wire);
-            }
-            if (chip.getOutputPins() != null && chip.getOutputPins().stream().anyMatch(pin -> pin == output)) {
-                wiresToBeRemoved.add(wire);
-            }
-        }
-        deleteWires(wiresToBeRemoved);
-    }
-
-    private void handleOutputChipPinClicked(OutputChipPin pin, MouseEvent e) {
-        if (e.getButton() != MouseButton.PRIMARY) return;
-
-        if (isWireDrawing) {
-            Wire currentWire = wires.get(wires.size() - 1);
-
-            if (currentWire.getSourcePin() instanceof OutputChipPin) return;
-            if (currentWire.getSourcePin() instanceof InputPin) return;
-
-            currentWire.setDestination(pin);
-            isWireDrawing = false;
-        } else {
-            isWireDrawing = true;
-            wires.add(new Wire(pin));
-        }
-    }
-
-    private void handleInputPinClicked(InputPin pin, MouseEvent e) {
-        if (e.getButton() != MouseButton.PRIMARY) return;
-
-        if (isWireDrawing) {
-            Wire currentWire = wires.get(wires.size() - 1);
-
-            if (currentWire.getSourcePin() instanceof InputPin) return;
-            if (currentWire.getSourcePin() instanceof OutputChipPin) return;
-
-            currentWire.setDestination(pin);
-            isWireDrawing = false;
-        } else {
-            isWireDrawing = true;
-            wires.add(new Wire(pin));
-        }
-    }
-
-    private void handleInputChipPinClicked(InputChipPin pin, MouseEvent e) {
-        if (e.getButton() != MouseButton.PRIMARY) return;
-
-        if (isWireDrawing) {
-            Wire currentWire = wires.get(wires.size() - 1);
-
-            if (currentWire.getSourcePin() instanceof OutputPin) return;
-            if (currentWire.getSourcePin() instanceof InputChipPin) return;
-
-            currentWire.setDestination(pin);
-            isWireDrawing = false;
-        } else {
-            isWireDrawing = true;
-            wires.add(new Wire(pin));
-        }
-    }
-
-    private void handleOutputPinClicked(OutputPin pin, MouseEvent e) {
-        if (e.getButton() != MouseButton.PRIMARY) return;
-
-        if (isWireDrawing) {
-            Wire currentWire = wires.get(wires.size() - 1);
-
-            if (currentWire.getSourcePin() instanceof InputChipPin) return;
-            if (currentWire.getSourcePin() instanceof OutputPin) return;
-
-            currentWire.setDestination(pin);
-            isWireDrawing = false;
-        } else {
-            isWireDrawing = true;
-            wires.add(new Wire(pin));
-        }
-    }
-
-    private void addStyleSheet(Scene scene, String filename) {
-        URL stylesheetURLCanBeNull = getClass().getClassLoader().getResource(filename);
-        String stylesheet = Objects.requireNonNull(stylesheetURLCanBeNull).toExternalForm();
-        scene.getStylesheets().clear();
-        scene.getStylesheets().add(stylesheet);
-    }
-
-    @NotNull
-    private EventHandler<MouseEvent> addNewOutputTerminal() {
-        return e -> outputPins.add(new OutputPin(e.getSceneY() - TerminalConstants.height / 2));
-    }
-
-    @NotNull
-    private EventHandler<MouseEvent> addNewInputTerminal() {
-        return e -> inputPins.add(new InputPin(e.getSceneY() - TerminalConstants.height / 2));
-    }
-
-    public Rectangle makeRectangle(double x, double y, double width, double height, Color color) {
-        Rectangle rect = new Rectangle();
-        rect.setX(x);
-        rect.setY(y);
-        rect.setWidth(width);
-        rect.setHeight(height);
-        rect.setFill(color);
-        return rect;
     }
 }

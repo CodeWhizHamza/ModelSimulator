@@ -73,6 +73,7 @@ public class Wire {
 
         this.state.set(State.LOW);
     }
+
     public Wire(Object source, Wire clickedWire, Point position) {
         this.source = source;
         this.destination = null;
@@ -80,11 +81,11 @@ public class Wire {
         mousePosition = new SimpleObjectProperty<>();
         if (source instanceof Pin) {
             mousePosition.set(
-                new Point(((Pin) source).getConnectionPoint().getX(), ((Pin) source).getConnectionPoint().getY())
+                    new Point(((Pin) source).getConnectionPoint().getX(), ((Pin) source).getConnectionPoint().getY())
             );
         } else {
             mousePosition.set(
-                new Point(((ChipPin) source).getConnectionPoint().getX(), ((ChipPin) source).getConnectionPoint().getY())
+                    new Point(((ChipPin) source).getConnectionPoint().getX(), ((ChipPin) source).getConnectionPoint().getY())
             );
         }
 
@@ -117,13 +118,13 @@ public class Wire {
             wireEnd = clickedWire.getOutputToChip().getConnectionPoint();
 
         ObservableList<Point> points = FXCollections.observableArrayList();
-        for(var point : clickedWire.getPoints())
+        for (var point : clickedWire.getPoints())
             points.add(new Point(point.getX(), point.getY()));
 
         points.add(0, wireStart);
         points.add(wireEnd);
 
-        for(int i = 0; i < points.size() - 1; i++) {
+        for (int i = 0; i < points.size() - 1; i++) {
             double slope = getSlope(points.get(i + 1), points.get(i));
             double distanceBetweenLineAndPoint = Math.abs(getDistanceBetweenPointAndLine(points.get(i), position, -slope));
 
@@ -142,6 +143,7 @@ public class Wire {
     private double getDistanceBetweenPointAndLine(Point pointForLine, Point testPoint, double slope) {
         return testPoint.getY() - pointForLine.getY() - slope * (testPoint.getX() - pointForLine.getX());
     }
+
     private double getSlope(Point point1, Point point2) {
         // the lower the point, the higher value of Y
         return (point1.getY() - point2.getY()) / (point2.getX() - point1.getX());
@@ -268,6 +270,7 @@ public class Wire {
         else
             outputToChip.setState(state.get());
     }
+
     private void resetState() {
         if (outputPin != null)
             outputPin.setState(State.LOW);

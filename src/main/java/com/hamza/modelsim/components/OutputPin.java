@@ -14,9 +14,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
 public class OutputPin extends Pin {
-    private String name;
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
     private final Text labelForName;
+    private String name;
 
     public OutputPin(double y) {
         super(y);
@@ -86,11 +86,6 @@ public class OutputPin extends Pin {
         canvas.getChildren().add(getPane());
     }
 
-    public void setState(State value) {
-        state.set(value);
-        getButton().setFill(state.get() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
-    }
-
     public String getName() {
         return name;
     }
@@ -102,6 +97,11 @@ public class OutputPin extends Pin {
 
     public State getState() {
         return state.get();
+    }
+
+    public void setState(State value) {
+        state.set(value);
+        getButton().setFill(state.get() == State.LOW ? Colors.terminalGreyColor : Colors.terminalActiveColor);
     }
 
     public SimpleObjectProperty<State> stateProperty() {

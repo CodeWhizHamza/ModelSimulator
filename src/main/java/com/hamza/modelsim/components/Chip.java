@@ -31,23 +31,20 @@ import java.util.Set;
 public class Chip {
     private final AnchorPane chip;
     private final String name;
-    private String[] functions;
     private final SimpleObjectProperty<Point> position;
     private final List<InputChipPin> inputPins;
-    private List<OutputChipPin> outputPins;
-
     private final List<String> inputs;
-    private List<String> outputs;
-
     private final ObservableList<State> inputValues;
+    private String[] functions;
+    private List<OutputChipPin> outputPins;
+    private List<String> outputs;
     private ObservableList<State> outputValues;
-    private ObservableList<Polygon> segments;
-
     private final ListChangeListener<? super State> outputValuesListener = change -> updateOutputPins();
     private final ChangeListener<State> inputChangesListener = (observableValue, state, t1) -> {
         initializeInputValues();
         updateOutputs();
     };
+    private ObservableList<Polygon> segments;
     private double xOffset;
     private double yOffset;
 
@@ -145,7 +142,7 @@ public class Chip {
         updateConnectionPoints();
 
         inputValues.addListener((ListChangeListener<? super State>) change -> {
-            for(int i = 0; i < inputValues.size(); i++) {
+            for (int i = 0; i < inputValues.size(); i++) {
                 segments.get(i).setFill(
                         inputValues.get(i) == State.HIGH
                                 ? Colors.terminalActiveColor
@@ -153,6 +150,47 @@ public class Chip {
                 );
             }
         });
+    }
+
+    @NotNull
+    private static Polygon getVSegment() {
+        double width = 8;
+        double height = 32;
+        Polygon hexagon = new Polygon();
+        hexagon.getPoints().addAll(
+                width / 2, 0.0,
+                width, height / 5,
+                width, 4 * height / 5,
+                width / 2, height,
+                0.0, 4 * height / 5,
+                0.0, height / 5,
+                width / 2, 0.0
+        );
+        hexagon.setFill(Colors.terminalGreyColor);
+        return hexagon;
+    }
+
+    @NotNull
+    private static Polygon getHSegment() {
+        double width = 32;
+        double height = 8;
+        Polygon hexagon = new Polygon();
+        hexagon.getPoints().addAll(
+                0.0, height / 2,
+                width / 5, 0.0,
+                4 * width / 5, 0.0,
+                width, height / 2,
+                4 * width / 5, height,
+                width / 5, height,
+                0.0, height / 2
+        );
+        hexagon.setFill(Colors.terminalGreyColor);
+        return hexagon;
+    }
+
+    public static String extractFunctionName(String expression) {
+        int equalsIndex = expression.indexOf("=");
+        return expression.substring(0, equalsIndex).trim();
     }
 
     public void addSegments() {
@@ -212,46 +250,6 @@ public class Chip {
         segmentsHolder.setLayoutY(chip.getPrefHeight() / 2 - holderHeight / 2);
 
         chip.getChildren().add(segmentsHolder);
-    }
-
-    @NotNull
-    private static Polygon getVSegment() {
-        double width = 8;
-        double height = 32;
-        Polygon hexagon = new Polygon();
-        hexagon.getPoints().addAll(
-                width / 2, 0.0,
-                width,         height / 5,
-                width,         4 * height / 5,
-                width / 2, height,
-                0.0,           4 * height / 5,
-                0.0,           height / 5,
-                width / 2,     0.0
-        );
-        hexagon.setFill(Colors.terminalGreyColor);
-        return hexagon;
-    }
-    @NotNull
-    private static Polygon getHSegment() {
-        double width = 32;
-        double height = 8;
-        Polygon hexagon = new Polygon();
-        hexagon.getPoints().addAll(
-                0.0,       height / 2,
-                width / 5,     0.0,
-                4 * width / 5, 0.0,
-                width,         height / 2,
-                4 * width / 5, height,
-                width / 5,     height,
-                0.0,           height / 2
-        );
-        hexagon.setFill(Colors.terminalGreyColor);
-        return hexagon;
-    }
-
-    public static String extractFunctionName(String expression) {
-        int equalsIndex = expression.indexOf("=");
-        return expression.substring(0, equalsIndex).trim();
     }
 
     private void listenToChangesInOutputs() {

@@ -8,8 +8,8 @@ import javafx.scene.shape.Circle;
 public abstract class ChipPin {
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
     private final Circle connector;
-    private Point connectionPoint;
     private final Chip chip;
+    private Point connectionPoint;
 
     public ChipPin(State state, Circle connector, Chip chip) {
         this.state.set(state);

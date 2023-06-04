@@ -16,8 +16,8 @@ import javafx.scene.text.Text;
 
 public class InputPin extends Pin {
     private final SimpleObjectProperty<State> state = new SimpleObjectProperty<>();
-    private String name;
     private final Text labelForName;
+    private String name;
 
     public InputPin(double y) {
         super(y);
