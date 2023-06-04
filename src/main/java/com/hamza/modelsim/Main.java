@@ -111,168 +111,6 @@ public class Main extends Application {
         return root;
     }
 
-    public void addNewGate() {
-        var background = new Pane();
-        background.setPrefHeight(1080);
-        background.setPrefWidth(1920);
-        background.setLayoutY(0);
-        background.setLayoutX(0);
-        background.setBackground(Background.fill(Color.color(0.2, 0.2,0.2, .95)));
-
-        var box = new VBox();
-        box.setBackground(Background.fill(Color.rgb(30, 30, 30)));
-        box.setPrefWidth(800);
-        box.setPrefHeight(700);
-
-        box.setLayoutX(300);
-        box.setLayoutY(60);
-        box.setAlignment(Pos.CENTER_LEFT);
-        box.setStyle("-fx-padding: 20px 60px;");
-
-        var title = new Text("Add new gate");
-        title.setFill(Colors.warmWhite);
-        title.setStyle("-fx-font-family: Calibri; -fx-font-size: 22px;");
-        box.getChildren().add(title);
-
-        // the text fields.
-        var nameLabel = new Text("Name:");
-        nameLabel.setFill(Colors.warmWhite);
-        nameLabel.setStyle("-fx-padding: 25px 0 0 0;");
-        var nameField = new TextField();
-
-        var functionsLabel = new Text("Functions:");
-        functionsLabel.setFill(Colors.warmWhite);
-        functionsLabel.setStyle("-fx-padding: 25px 0 0 0;");
-        ObservableList<TextField> functions = FXCollections.observableArrayList(new TextField());
-
-        var addFunction = new Button("+ add function");
-        addFunction.setOnAction(e -> functions.add(new TextField()));
-
-        var fieldsBox = new VBox();
-        fieldsBox.getChildren().addAll(nameLabel, nameField, functionsLabel);
-        fieldsBox.getChildren().addAll(functions);
-        fieldsBox.getChildren().add(addFunction);
-
-        box.getChildren().add(fieldsBox);
-
-
-        functions.addListener((ListChangeListener<? super TextField>) change -> {
-            fieldsBox.getChildren().clear();
-            fieldsBox.getChildren().addAll(nameLabel, nameField, functionsLabel);
-            fieldsBox.getChildren().addAll(functions);
-            fieldsBox.getChildren().add(addFunction);
-        });
-
-        var closeButton = new Button("Close");
-        var addButton = new Button("Add gate");
-
-        closeButton.setOnAction(e -> playgroundCanvas.getDrawable().getChildren().removeIf(child -> child == background));
-
-        addButton.setOnAction(e -> {
-            if (nameField.getCharacters().isEmpty()) {
-                nameLabel.setText("Name: *required (please enter name)");
-                return;
-            } else {
-                nameLabel.setText("Name: ");
-            }
-
-            var validFunctions = functions.stream().filter(f -> !f.getCharacters().isEmpty()).toList();
-            for(var f : validFunctions) System.out.println("Gate: " + f.getCharacters());
-            if (validFunctions.size() == 0) {
-                functionsLabel.setText("Functions: *required (please enter at least one function)");
-                return;
-            } else {
-                functionsLabel.setText("Functions: ");
-            }
-            for (var f : validFunctions) {
-                if (validateBooleanFunction(f.getCharacters().toString())) {
-                    System.out.println(f.getCharacters().toString() + " is valid.");
-                }
-            }
-            validFunctions = validFunctions.stream().filter(f -> validateBooleanFunction(f.getCharacters().toString())).toList();
-
-            if (validFunctions.size() < 1) {
-                functionsLabel.setText("Functions: *(please enter valid boolean function)");
-                return;
-            } else {
-                functionsLabel.setText("Functions:");
-            }
-
-            availableChips.add(new ChipLabel(nameField.getText(), validFunctions.stream().map(field -> field.getCharacters().toString()).toArray(String[]::new)));
-            playgroundCanvas.getDrawable().getChildren().removeIf(child -> child == background);
-
-        });
-
-        var buttons = new HBox();
-        buttons.getChildren().add(closeButton);
-        buttons.getChildren().add(addButton);
-        box.getChildren().add(buttons);
-
-        background.getChildren().add(box);
-        playgroundCanvas.add(background);
-    }
-
-    public boolean validateBooleanFunction(String function) {
-        int equalsIndex = function.indexOf("=");
-
-        if (equalsIndex < 0)
-            return false;
-
-        String functionName = function.substring(0, equalsIndex).trim();
-
-        if (functionName.equals(""))
-            return false;
-
-        if (function.length() < equalsIndex + 1)
-            return false;
-
-        Set<String> inputsSet = new HashSet<>();
-        String[] parts = function
-                .replaceAll("\\|", "OR")
-                .replaceAll("&", "AND")
-                .replaceAll("!", "NOT")
-                .substring(equalsIndex + 1)
-                .replaceAll("[()]", "")
-                .split("\\s*(AND|OR|NOT)\\s*");
-
-        for (String token : parts) {
-            if (!token.matches("(AND|OR|NOT)") && token.length() > 0) {
-                inputsSet.add(token);
-            }
-        }
-
-        var inputs = new ArrayList<>(inputsSet);
-        String expression = function.substring(equalsIndex + 1);
-        expression = expression
-                .substring(expression.indexOf("=") + 1)
-                .replaceAll("&", "&&")
-                .replaceAll("\\|", "||");
-
-        for(var input : inputs) {
-            expression = expression.replaceAll(input, "true");
-        }
-        System.out.println(expression);
-
-        Context context = Context.enter();
-        try {
-            Scriptable scope = context.initStandardObjects();
-            String testFunction = "function solveBooleanFunction() { return " + expression + "; }";
-            context.evaluateString(scope, testFunction, "BooleanFunction", 1, null);
-            Object solveFunction = scope.get("solveBooleanFunction", scope);
-            org.mozilla.javascript.Function javaFunction = (org.mozilla.javascript.Function) solveFunction;
-
-            javaFunction.call(context, scope, scope, new Object[]{});
-
-        } catch (Exception e) {
-            System.out.println("Exception raised in the function");
-            return false;
-        } finally {
-            Context.exit();
-        }
-
-        return true;
-    }
-
     private static Popup showResultsPopup(ScrollPane scrollContainer, HashMap<String, Boolean> testResults) {
         Popup popup = new Popup();
         VBox popupContent = new VBox();
@@ -664,6 +502,161 @@ public class Main extends Application {
         return rect;
     }
 
+    public void addNewGate() {
+        var background = new Pane();
+        background.setPrefHeight(1080);
+        background.setPrefWidth(1920);
+        background.setLayoutY(0);
+        background.setLayoutX(0);
+        background.setBackground(Background.fill(Color.color(0.2, 0.2, 0.2, .95)));
+
+        var box = new VBox();
+        box.setBackground(Background.fill(Color.rgb(30, 30, 30)));
+        box.setPrefWidth(800);
+        box.setPrefHeight(700);
+
+        box.setLayoutX(300);
+        box.setLayoutY(60);
+        box.setAlignment(Pos.CENTER_LEFT);
+        box.setStyle("-fx-padding: 20px 60px;");
+
+        var title = new Text("Add new gate");
+        title.setFill(Colors.warmWhite);
+        title.setStyle("-fx-font-family: Calibri; -fx-font-size: 22px;");
+        box.getChildren().add(title);
+
+        // the text fields.
+        var nameLabel = new Text("Name:");
+        nameLabel.setFill(Colors.warmWhite);
+        nameLabel.setStyle("-fx-padding: 25px 0 0 0;");
+        var nameField = new TextField();
+
+        var functionsLabel = new Text("Functions:");
+        functionsLabel.setFill(Colors.warmWhite);
+        functionsLabel.setStyle("-fx-padding: 25px 0 0 0;");
+        ObservableList<TextField> functions = FXCollections.observableArrayList(new TextField());
+
+        var addFunction = new Button("+ add function");
+        addFunction.setOnAction(e -> functions.add(new TextField()));
+
+        var fieldsBox = new VBox();
+        fieldsBox.getChildren().addAll(nameLabel, nameField, functionsLabel);
+        fieldsBox.getChildren().addAll(functions);
+        fieldsBox.getChildren().add(addFunction);
+
+        box.getChildren().add(fieldsBox);
+
+
+        functions.addListener((ListChangeListener<? super TextField>) change -> {
+            fieldsBox.getChildren().clear();
+            fieldsBox.getChildren().addAll(nameLabel, nameField, functionsLabel);
+            fieldsBox.getChildren().addAll(functions);
+            fieldsBox.getChildren().add(addFunction);
+        });
+
+        var closeButton = new Button("Close");
+        var addButton = new Button("Add gate");
+
+        closeButton.setOnAction(e -> playgroundCanvas.getDrawable().getChildren().removeIf(child -> child == background));
+
+        addButton.setOnAction(e -> {
+            if (nameField.getCharacters().isEmpty()) {
+                nameLabel.setText("Name: *required (please enter name)");
+                return;
+            } else {
+                nameLabel.setText("Name: ");
+            }
+
+            var validFunctions = functions.stream().filter(f -> !f.getCharacters().isEmpty()).toList();
+            if (validFunctions.size() == 0) {
+                functionsLabel.setText("Functions: *required (please enter at least one function)");
+                return;
+            } else {
+                functionsLabel.setText("Functions: ");
+            }
+            validFunctions = validFunctions.stream().filter(f -> validateBooleanFunction(f.getCharacters().toString())).toList();
+
+            if (validFunctions.size() < 1) {
+                functionsLabel.setText("Functions: *(please enter valid boolean function)");
+                return;
+            } else {
+                functionsLabel.setText("Functions:");
+            }
+
+            availableChips.add(new ChipLabel(nameField.getText(), validFunctions.stream().map(field -> field.getCharacters().toString()).toArray(String[]::new)));
+            playgroundCanvas.getDrawable().getChildren().removeIf(child -> child == background);
+
+        });
+
+        var buttons = new HBox();
+        buttons.getChildren().add(closeButton);
+        buttons.getChildren().add(addButton);
+        box.getChildren().add(buttons);
+
+        background.getChildren().add(box);
+        playgroundCanvas.add(background);
+    }
+
+    public boolean validateBooleanFunction(String function) {
+        int equalsIndex = function.indexOf("=");
+
+        if (equalsIndex < 0)
+            return false;
+
+        String functionName = function.substring(0, equalsIndex).trim();
+
+        if (functionName.equals(""))
+            return false;
+
+        if (function.length() < equalsIndex + 1)
+            return false;
+
+        Set<String> inputsSet = new HashSet<>();
+        String[] parts = function
+                .replaceAll("\\|", "OR")
+                .replaceAll("&", "AND")
+                .replaceAll("!", "NOT")
+                .substring(equalsIndex + 1)
+                .replaceAll("[()]", "")
+                .split("\\s*(AND|OR|NOT)\\s*");
+
+        for (String token : parts) {
+            if (!token.matches("(AND|OR|NOT)") && token.length() > 0) {
+                inputsSet.add(token);
+            }
+        }
+
+        var inputs = new ArrayList<>(inputsSet);
+        String expression = function.substring(equalsIndex + 1);
+        expression = expression
+                .substring(expression.indexOf("=") + 1)
+                .replaceAll("&", "&&")
+                .replaceAll("\\|", "||");
+
+        for (var input : inputs) {
+            expression = expression.replaceAll(input, "true");
+        }
+
+        Context context = Context.enter();
+        try {
+            Scriptable scope = context.initStandardObjects();
+            String testFunction = "function solveBooleanFunction() { return " + expression + "; }";
+            context.evaluateString(scope, testFunction, "BooleanFunction", 1, null);
+            Object solveFunction = scope.get("solveBooleanFunction", scope);
+            org.mozilla.javascript.Function javaFunction = (org.mozilla.javascript.Function) solveFunction;
+
+            javaFunction.call(context, scope, scope, new Object[]{});
+
+        } catch (Exception e) {
+            System.out.println("Exception raised in the function");
+            return false;
+        } finally {
+            Context.exit();
+        }
+
+        return true;
+    }
+
     @Override
     public void start(Stage mainStage) {
         Main.mainStage = mainStage;
@@ -694,7 +687,6 @@ public class Main extends Application {
     }
 
     public void showStartMenu() {
-        System.out.println("menu called...");
         Button play = new Button("Play Game");
         Button gotoPlayground = new Button("Goto Playground");
         Button quitBtn = new Button("Quit");
@@ -1083,7 +1075,7 @@ public class Main extends Application {
                     var background = new Pane();
                     background.setPrefWidth(1920);
                     background.setPrefHeight(1080);
-                    background.setBackground(Background.fill(Color.color(0.2, 0.2,0.2, .95)));
+                    background.setBackground(Background.fill(Color.color(0.2, 0.2, 0.2, .95)));
                     background.setLayoutX(0);
                     background.setLayoutY(0);
 
@@ -1172,9 +1164,6 @@ public class Main extends Application {
             timeTimeline.setCycleCount(level.maxTime);
             timeTimeline.play();
         }
-
-
-
 
 
         inputPins.addListener((ListChangeListener<? super InputPin>) change -> inputPins.forEach(pin -> pin.getConnector().setOnMouseClicked(e -> handleInputPinClicked(pin, e))));
