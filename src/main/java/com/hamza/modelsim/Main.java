@@ -1288,9 +1288,9 @@ public class Main extends Application {
 
             Button menuButton = new Button("Menu");
             menuButton.setOnAction(menuEvent -> {
+
                 ContextMenu menuContainer = new ContextMenu();
                 menuContainer.setWidth(300);
-
                 var gotoMainMenu = new MenuItem("Goto MainMenu");
                 gotoMainMenu.setOnAction(e -> showStartMenu());
 
@@ -1322,6 +1322,22 @@ public class Main extends Application {
                         chips.add(new Chip(chip.getName(), chip.getFunctions(), position));
                     else
                         chips.add(new Chip(chip.getName(), position));
+                });
+
+                button.setOnMouseClicked(e -> {
+                    if (e.getButton() == MouseButton.SECONDARY) {
+                        ContextMenu menuContainer = new ContextMenu();
+                        menuContainer.setWidth(300);
+
+                        var deleteButton = new MenuItem("Delete");
+                        deleteButton.setOnAction(event -> {
+                            availableChips.remove(chip);
+                        });
+
+                        menuContainer.getItems().add(deleteButton);
+
+                        menuContainer.show(scene.getWindow(), e.getSceneX(), e.getSceneY());
+                    }
                 });
                 buttons.add(button);
             });
